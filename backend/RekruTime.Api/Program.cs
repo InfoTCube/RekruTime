@@ -5,6 +5,7 @@ using RekruTime.Api.Data;
 using RekruTime.Api.Features.Auth;
 using RekruTime.Api.Features.Availability;
 using RekruTime.Api.Features.Booking;
+using RekruTime.Api.Features.Interviews;
 using RekruTime.Api.Features.Sections;
 using RekruTime.Api.Features.Settings;
 using RekruTime.Api.Features.Users;
@@ -72,6 +73,7 @@ app.MapAvailabilityEndpoints();
 app.MapSettingsEndpoints();
 app.MapBookingLinkEndpoints();
 app.MapPublicBookingEndpoints();
+app.MapInterviewEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
 app.MapFallbackToFile("index.html");                        // client-side routes
