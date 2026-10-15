@@ -1,0 +1,55 @@
+# Production: app + Postgres. Settings come from .env (copy .env.example). See docs/DEPLOY.md.
+# The image is built by GitHub Actions on every push to main; update with `pull` + `up -d`.
+#   docker compose -f docker-compose.prod.yml up -d                     # behind your own reverse proxy (→ 127.0.0.1:8080)
+#   docker compose -f docker-compose.prod.yml --profile caddy up -d     # bare VPS: Caddy with automatic HTTPS
+services:
+  app:
+    image: ghcr.io/infotcube/rekrutime:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      ConnectionStrings__Default: Host=db;Database=rekrutime;Username=rekrutime;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080" # localhost only: the app trusts X-Forwarded-* headers, so only a proxy may reach it
+    volumes:
+      - keys:/keys # Data Protection keys – logins survive redeploys
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rekrutime
+      POSTGRES_USER: rekrutime
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rekrutime -d rekrutime"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    image: caddy:2
+    profiles: [caddy]
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # certificates
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  keys:
+  caddy_data:
