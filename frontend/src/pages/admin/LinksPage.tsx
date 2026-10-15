@@ -1,13 +1,15 @@
 import {
-  Alert, Badge, Button, CopyButton, Group, Loader, Modal, MultiSelect, NumberInput, SegmentedControl, Select, Stack, Table, Text, Textarea, TextInput, Title,
+  Alert, Badge, Button, Checkbox, CopyButton, Group, Loader, Modal, MultiSelect, NumberInput, SegmentedControl, Select, Stack, Table, Text, Textarea, TextInput, Title, Tooltip,
 } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, errorMessage, fieldError } from '../../api'
+import { ConfirmModal } from '../../components/ConfirmModal'
 import { useSections } from '../../sections'
 import { LinkCoverage } from './LinkCoverage'
 
 type Status = 'Unused' | 'Booked' | 'Expired' | 'Inactive'
+type InvitationState = 'NotSent' | 'Queued' | 'Sent' | 'Failed'
 type Link = {
   id: number
   token: string
@@ -20,6 +22,7 @@ type Link = {
   expiresAt: string | null
   status: Status
   interviewStart: string | null
+  invitation: { state: InvitationState; at: string | null; error: string | null }
 }
 
 const linksKey = ['booking-links']
@@ -27,6 +30,14 @@ const statusColor: Record<Status, string> = { Unused: 'blue', Booked: 'green', E
 const fullUrl = (l: Link) => window.location.origin + l.url
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const who = (l: Link) => l.label ?? l.recruitEmail ?? 'Anonymous'
+// Invitations go to the recruit's e-mail, only while the link can still be used.
+const canInvite = (l: Link) => !!l.recruitEmail && l.status === 'Unused'
+const invitationBadge: Record<InvitationState, [string, string]> = {
+  NotSent: ['gray', 'Not sent'],
+  Queued: ['blue', 'Sending…'],
+  Sent: ['green', 'Sent'],
+  Failed: ['red', 'Failed'],
+}
 
 // "Name, email" / "email" / "Name" per line; comma, semicolon or tab separated (pasting from a spreadsheet works).
 function parseRecipients(text: string) {
@@ -55,14 +66,32 @@ const copyText = (links: Link[]) => links.map((l) => `${who(l)}\t${fullUrl(l)}`)
 
 export function LinksPage() {
   const sections = useSections()
+  const queryClient = useQueryClient()
   const [sectionId, setSectionId] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  const [invitation, setInvitation] = useState<string | null>(null)
   const params = new URLSearchParams()
   if (sectionId) params.set('sectionId', sectionId)
   if (status) params.set('status', status)
-  const links = useQuery({ queryKey: [...linksKey, sectionId, status], queryFn: () => api<Link[]>(`/api/booking-links?${params}`) })
+  if (invitation) params.set('invitation', invitation)
+  const links = useQuery({
+    queryKey: [...linksKey, sectionId, status, invitation],
+    queryFn: () => api<Link[]>(`/api/booking-links?${params}`),
+    refetchInterval: (q) => (q.state.data?.some((l) => l.invitation.state === 'Queued') ? 5000 : false), // watch e-mails go out
+  })
 
-  const queryClient = useQueryClient()
+  const [selected, setSelected] = useState<number[]>([])
+  const invitable = (links.data ?? []).filter(canInvite)
+  const [toInvite, setToInvite] = useState<number[] | null>(null)
+  const invite = useMutation({
+    mutationFn: (ids: number[]) => api<{ queued: number; skipped: number }>('/api/booking-links/invite', { method: 'POST', json: { linkIds: ids } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: linksKey })
+      setSelected([])
+      setToInvite(null)
+    },
+  })
+
   const setActive = useMutation({
     mutationFn: (l: Link) => api(`/api/booking-links/${l.id}`, { method: 'PATCH', json: { isActive: l.status === 'Inactive' } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: linksKey }),
@@ -85,6 +114,24 @@ export function LinksPage() {
       <Group align="flex-end">
         <Select label="Section" placeholder="All" clearable value={sectionId} onChange={setSectionId} data={(sections.data ?? []).map((s) => ({ value: String(s.id), label: s.name }))} />
         <Select label="Status" placeholder="All" clearable value={status} onChange={setStatus} data={['Unused', 'Booked', 'Expired', 'Inactive']} />
+        <Select
+          label="Invitation"
+          placeholder="All"
+          clearable
+          value={invitation}
+          onChange={setInvitation}
+          data={Object.entries(invitationBadge).map(([value, [, label]]) => ({ value, label }))}
+        />
+        {selected.length > 0 && (
+          <Button
+            onClick={() => {
+              invite.reset()
+              setToInvite(selected)
+            }}
+          >
+            Send invitations ({selected.length})
+          </Button>
+        )}
         {!!links.data?.length && (
           <>
             <CopyButton value={copyText(links.data)}>
@@ -104,15 +151,31 @@ export function LinksPage() {
       {links.isPending && <Loader />}
       {links.isError && <Alert color="red">{errorMessage(links.error)}</Alert>}
       {setActive.isError && <Alert color="red">{errorMessage(setActive.error)}</Alert>}
+      {invite.data && (
+        <Alert color="green" withCloseButton onClose={() => invite.reset()}>
+          {invite.data.queued} invitation{invite.data.queued === 1 ? '' : 's'} queued
+          {invite.data.skipped > 0 && ` · ${invite.data.skipped} skipped (booked, inactive, expired or without e-mail)`}.
+        </Alert>
+      )}
       {links.data?.length === 0 && <Text c="dimmed">No links.</Text>}
       {!!links.data?.length && (
-        <Table.ScrollContainer minWidth={760}>
+        <Table.ScrollContainer minWidth={900}>
           <Table striped>
             <Table.Thead>
               <Table.Tr>
+                <Table.Th w={36}>
+                  <Checkbox
+                    aria-label="Select all that can be invited"
+                    disabled={invitable.length === 0}
+                    checked={invitable.length > 0 && invitable.every((l) => selected.includes(l.id))}
+                    indeterminate={selected.length > 0 && !invitable.every((l) => selected.includes(l.id))}
+                    onChange={(e) => setSelected(e.currentTarget.checked ? invitable.map((l) => l.id) : [])}
+                  />
+                </Table.Th>
                 <Table.Th>Recruit</Table.Th>
                 <Table.Th>Sections</Table.Th>
                 <Table.Th>Status</Table.Th>
+                <Table.Th>Invitation</Table.Th>
                 <Table.Th>Expires</Table.Th>
                 <Table.Th />
               </Table.Tr>
@@ -120,6 +183,14 @@ export function LinksPage() {
             <Table.Tbody>
               {links.data.map((l) => (
                 <Table.Tr key={l.id}>
+                  <Table.Td>
+                    <Checkbox
+                      aria-label={`Select ${who(l)}`}
+                      disabled={!canInvite(l)}
+                      checked={selected.includes(l.id)}
+                      onChange={(e) => setSelected(e.currentTarget.checked ? [...selected, l.id] : selected.filter((id) => id !== l.id))}
+                    />
+                  </Table.Td>
                   <Table.Td>
                     <Text size="sm">{who(l)}</Text>
                     {l.recruitEmail && l.label !== l.recruitEmail && (
@@ -148,6 +219,24 @@ export function LinksPage() {
                     )}
                   </Table.Td>
                   <Table.Td>
+                    {l.recruitEmail ? (
+                      <Tooltip label={l.invitation.error} disabled={!l.invitation.error} multiline w={320}>
+                        <Badge color={l.invitation.state === 'Queued' && l.invitation.error ? 'orange' : invitationBadge[l.invitation.state][0]} variant="light">
+                          {l.invitation.state === 'Queued' && l.invitation.error ? 'Retrying' : invitationBadge[l.invitation.state][1]}
+                        </Badge>
+                      </Tooltip>
+                    ) : (
+                      <Text size="xs" c="dimmed">
+                        no e-mail
+                      </Text>
+                    )}
+                    {l.invitation.at && l.invitation.state === 'Sent' && (
+                      <Text size="xs" c="dimmed">
+                        {when(l.invitation.at)}
+                      </Text>
+                    )}
+                  </Table.Td>
+                  <Table.Td>
                     <Text size="sm">{l.expiresAt ? when(l.expiresAt) : '—'}</Text>
                   </Table.Td>
                   <Table.Td>
@@ -159,6 +248,18 @@ export function LinksPage() {
                           </Button>
                         )}
                       </CopyButton>
+                      {canInvite(l) && (
+                        <Button
+                          size="xs"
+                          variant="subtle"
+                          onClick={() => {
+                            invite.reset()
+                            setToInvite([l.id])
+                          }}
+                        >
+                          {l.invitation.state === 'NotSent' ? 'Send' : 'Resend'}
+                        </Button>
+                      )}
                       <Button size="xs" variant="subtle" onClick={() => setCoverageFor(l)}>
                         Free times
                       </Button>
@@ -181,6 +282,22 @@ export function LinksPage() {
           </Table>
         </Table.ScrollContainer>
       )}
+
+      <ConfirmModal
+        opened={toInvite !== null}
+        title="Send invitations"
+        message={
+          toInvite?.length === 1
+            ? `Send the invitation with the booking link to ${who(links.data!.find((l) => l.id === toInvite[0])!)}?`
+            : `Send the invitation e-mail to ${toInvite?.length} recruits?`
+        }
+        confirmLabel="Send"
+        color="blue"
+        loading={invite.isPending}
+        error={invite.error}
+        onConfirm={() => toInvite && invite.mutate(toInvite)}
+        onClose={() => setToInvite(null)}
+      />
 
       <Modal opened={creating} onClose={() => setCreating(false)} title="Create booking links" size="lg" centered>
         {creating && (

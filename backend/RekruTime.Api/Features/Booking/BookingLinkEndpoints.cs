@@ -3,7 +3,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using RekruTime.Api.Data;
+using RekruTime.Api.Features.Email;
 
 namespace RekruTime.Api.Features.Booking;
 
@@ -18,8 +20,13 @@ public record CreateLinksRequest(
 
 public enum LinkStatus { Unused, Booked, Expired, Inactive }
 
+public enum InvitationState { NotSent, Queued, Sent, Failed }
+public record InvitationDto(InvitationState State, DateTime? At, string? Error); // the latest invitation e-mail for the link
+
 public record LinkDto(int Id, string Token, string Url, string? Label, string? RecruitName, string? RecruitEmail,
-    List<string> Sections, DateTime CreatedAt, DateTime? ExpiresAt, LinkStatus Status, DateTime? InterviewStart);
+    List<string> Sections, DateTime CreatedAt, DateTime? ExpiresAt, LinkStatus Status, DateTime? InterviewStart, InvitationDto Invitation);
+
+public record InviteRequest([MinLength(1), MaxLength(2000)] int[] LinkIds);
 
 public record SetActiveRequest(bool IsActive);
 
@@ -33,12 +40,28 @@ public static class BookingLinkEndpoints
     {
         var links = app.MapGroup("/api/booking-links").WithTags("Booking links").RequireAuthorization(Roles.Admin);
 
-        links.MapGet("/", async (int? sectionId, LinkStatus? status, AppDbContext db) =>
+        links.MapGet("/", async (int? sectionId, LinkStatus? status, InvitationState? invitation, AppDbContext db) =>
         {
             var query = db.BookingLinks.AsQueryable();
             if (sectionId is { } sid) query = query.Where(l => l.Sections.Any(s => s.Id == sid));
             var list = await Project(query, db).ToListAsync();
-            return list.Select(ToDto).Where(l => status is null || l.Status == status);
+            return list.Select(ToDto).Where(l => (status is null || l.Status == status) && (invitation is null || l.Invitation.State == invitation));
+        });
+
+        // (Re)send the invitation e-mail. Only links that can still be used and belong to someone with an e-mail.
+        links.MapPost("/invite", async (InviteRequest req, AppDbContext db, IConfiguration config, IOptions<EmailOptions> email) =>
+        {
+            if (!email.Value.IsConfigured) return Results.Problem("E-mail isn't configured (Admin → E-mail).", statusCode: 400);
+            if (string.IsNullOrWhiteSpace(config["Club:PublicUrl"])) return Results.Problem("Club:PublicUrl isn't set, so e-mails can't contain a working link.", statusCode: 400);
+
+            var now = DateTime.UtcNow;
+            var eligible = await db.BookingLinks.Include(l => l.Recruit).Include(l => l.Sections)
+                .Where(l => req.LinkIds.Contains(l.Id) && l.Recruit != null && l.IsActive && (l.ExpiresAt == null || l.ExpiresAt > now)
+                    && !db.Interviews.Any(i => i.BookingLinkId == l.Id && i.Status != InterviewStatus.Cancelled))
+                .ToListAsync();
+            var queued = await Invitations.QueueAsync(db, config, eligible);
+            await db.SaveChangesAsync();
+            return Results.Ok(new { queued, skipped = req.LinkIds.Distinct().Count() - queued });
         });
 
         links.MapPost("/", async (CreateLinksRequest req, ClaimsPrincipal user, AppDbContext db) =>
@@ -113,10 +136,14 @@ public static class BookingLinkEndpoints
         links.OrderByDescending(l => l.CreatedAt).ThenByDescending(l => l.Id).Select(l => new LinkRow(
             l.Id, l.Token, l.Label, l.Recruit != null ? l.Recruit.FullName : null, l.Recruit != null ? l.Recruit.Email : null,
             l.Sections.OrderBy(s => s.Name).Select(s => s.Name).ToList(), l.CreatedAt, l.ExpiresAt, l.IsActive,
-            db.Interviews.Where(i => i.BookingLinkId == l.Id && i.Status != InterviewStatus.Cancelled).Select(i => (DateTime?)i.Start).FirstOrDefault()));
+            db.Interviews.Where(i => i.BookingLinkId == l.Id && i.Status != InterviewStatus.Cancelled).Select(i => (DateTime?)i.Start).FirstOrDefault(),
+            db.EmailMessages.Where(m => m.BookingLinkId == l.Id).OrderByDescending(m => m.Id)
+                .Select(m => new LastMail(m.Status, m.CreatedAt, m.SentAt, m.LastError)).FirstOrDefault()));
 
     record LinkRow(int Id, string Token, string? Label, string? RecruitName, string? RecruitEmail, List<string> Sections,
-        DateTime CreatedAt, DateTime? ExpiresAt, bool IsActive, DateTime? InterviewStart);
+        DateTime CreatedAt, DateTime? ExpiresAt, bool IsActive, DateTime? InterviewStart, LastMail? Mail);
+
+    record LastMail(EmailStatus Status, DateTime CreatedAt, DateTime? SentAt, string? LastError);
 
     static LinkDto ToDto(LinkRow l) => new(l.Id, l.Token, $"/book/{l.Token}", l.Label, l.RecruitName, l.RecruitEmail, l.Sections,
         l.CreatedAt, l.ExpiresAt,
@@ -124,5 +151,12 @@ public static class BookingLinkEndpoints
         : !l.IsActive ? LinkStatus.Inactive
         : l.ExpiresAt < DateTime.UtcNow ? LinkStatus.Expired
         : LinkStatus.Unused,
-        l.InterviewStart);
+        l.InterviewStart,
+        l.Mail switch
+        {
+            null => new InvitationDto(InvitationState.NotSent, null, null),
+            { Status: EmailStatus.Sent } m => new InvitationDto(InvitationState.Sent, m.SentAt, null),
+            { Status: EmailStatus.Failed } m => new InvitationDto(InvitationState.Failed, m.CreatedAt, m.LastError),
+            var m => new InvitationDto(InvitationState.Queued, m.CreatedAt, m.LastError), // pending, possibly retrying
+        });
 }
