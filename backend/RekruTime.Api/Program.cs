@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RekruTime.Api.Data;
 using RekruTime.Api.Features.Auth;
 using RekruTime.Api.Features.Sections;
+using RekruTime.Api.Features.Users;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +13,10 @@ builder.Services.AddDbContext<AppDbContext>(o =>
 builder.Services.AddOpenApi();
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(o => o.User.RequireUniqueEmail = true)
-    .AddEntityFrameworkStores<AppDbContext>();
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders(); // password reset tokens
+// Re-read roles/sign-out from the DB every minute, so role changes and deleted users take effect quickly.
+builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
 builder.Services.AddAuthorization(o => o.AddPolicy(Roles.Admin, p => p.RequireRole(Roles.Admin)));
 builder.Services.AddValidation(); // DataAnnotations on endpoint parameters → 400 ValidationProblem
 builder.Services.AddProblemDetails();
@@ -47,6 +51,7 @@ app.MapGet("/api/health", async (AppDbContext db) =>
     await db.Database.CanConnectAsync() ? Results.Ok(new { status = "ok" }) : Results.StatusCode(503));
 app.MapAuthEndpoints();
 app.MapSectionEndpoints();
+app.MapUserEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
 app.MapFallbackToFile("index.html");                        // client-side routes

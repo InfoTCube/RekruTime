@@ -6,6 +6,7 @@ export type Me = {
   email: string
   displayName: string
   roles: string[]
+  sections: { id: number; name: string }[]
 }
 
 export const meKey = ['me']
