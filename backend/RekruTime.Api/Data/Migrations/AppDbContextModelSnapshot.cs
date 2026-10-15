@@ -22,6 +22,51 @@ namespace RekruTime.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("BookingLinkSections", b =>
+                {
+                    b.Property<int>("BookingLinkId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SectionsId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("BookingLinkId", "SectionsId");
+
+                    b.HasIndex("SectionsId");
+
+                    b.ToTable("BookingLinkSections");
+                });
+
+            modelBuilder.Entity("InterviewInterviewers", b =>
+                {
+                    b.Property<int>("InterviewId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("InterviewersId")
+                        .HasColumnType("text");
+
+                    b.HasKey("InterviewId", "InterviewersId");
+
+                    b.HasIndex("InterviewersId");
+
+                    b.ToTable("InterviewInterviewers");
+                });
+
+            modelBuilder.Entity("InterviewSections", b =>
+                {
+                    b.Property<int>("InterviewId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SectionsId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("InterviewId", "SectionsId");
+
+                    b.HasIndex("SectionsId");
+
+                    b.ToTable("InterviewSections");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -222,6 +267,276 @@ namespace RekruTime.Api.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("RekruTime.Api.Data.Application", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RecruitId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SectionId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SectionId");
+
+                    b.HasIndex("RecruitId", "SectionId")
+                        .IsUnique();
+
+                    b.ToTable("Applications");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.Availability", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("End")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Start");
+
+                    b.ToTable("Availabilities", t =>
+                        {
+                            t.HasCheckConstraint("CK_Availabilities_Range", "\"End\" > \"Start\"");
+                        });
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.BookingLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedById")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Label")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("RecruitId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("RecruitId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("BookingLinks");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.Interview", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("BlockedUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("BookingLinkId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("End")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RecruitId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingLinkId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Interviews_OneBookingPerLink")
+                        .HasFilter("\"Status\" <> 'Cancelled'");
+
+                    b.HasIndex("RecruitId");
+
+                    b.HasIndex("Start");
+
+                    b.ToTable("Interviews", t =>
+                        {
+                            t.HasCheckConstraint("CK_Interviews_Range", "\"End\" > \"Start\" AND \"BlockedUntil\" >= \"End\"");
+                        });
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.Recruit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Recruits");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.Section", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BufferMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("InterviewDurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Sections", t =>
+                        {
+                            t.HasCheckConstraint("CK_Sections_Buffer", "\"BufferMinutes\" >= 0");
+
+                            t.HasCheckConstraint("CK_Sections_Duration", "\"InterviewDurationMinutes\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.UserSection", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("SectionId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId", "SectionId");
+
+                    b.HasIndex("SectionId");
+
+                    b.ToTable("UserSections");
+                });
+
+            modelBuilder.Entity("BookingLinkSections", b =>
+                {
+                    b.HasOne("RekruTime.Api.Data.BookingLink", null)
+                        .WithMany()
+                        .HasForeignKey("BookingLinkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RekruTime.Api.Data.Section", null)
+                        .WithMany()
+                        .HasForeignKey("SectionsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InterviewInterviewers", b =>
+                {
+                    b.HasOne("RekruTime.Api.Data.Interview", null)
+                        .WithMany()
+                        .HasForeignKey("InterviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RekruTime.Api.Data.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("InterviewersId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InterviewSections", b =>
+                {
+                    b.HasOne("RekruTime.Api.Data.Interview", null)
+                        .WithMany()
+                        .HasForeignKey("InterviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RekruTime.Api.Data.Section", null)
+                        .WithMany()
+                        .HasForeignKey("SectionsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -271,6 +586,91 @@ namespace RekruTime.Api.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.Application", b =>
+                {
+                    b.HasOne("RekruTime.Api.Data.Recruit", null)
+                        .WithMany("Applications")
+                        .HasForeignKey("RecruitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RekruTime.Api.Data.Section", "Section")
+                        .WithMany()
+                        .HasForeignKey("SectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Section");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.Availability", b =>
+                {
+                    b.HasOne("RekruTime.Api.Data.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.BookingLink", b =>
+                {
+                    b.HasOne("RekruTime.Api.Data.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("RekruTime.Api.Data.Recruit", "Recruit")
+                        .WithMany()
+                        .HasForeignKey("RecruitId");
+
+                    b.Navigation("Recruit");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.Interview", b =>
+                {
+                    b.HasOne("RekruTime.Api.Data.BookingLink", null)
+                        .WithMany()
+                        .HasForeignKey("BookingLinkId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("RekruTime.Api.Data.Recruit", "Recruit")
+                        .WithMany()
+                        .HasForeignKey("RecruitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Recruit");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.UserSection", b =>
+                {
+                    b.HasOne("RekruTime.Api.Data.Section", "Section")
+                        .WithMany()
+                        .HasForeignKey("SectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RekruTime.Api.Data.AppUser", "User")
+                        .WithMany("Sections")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Section");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.AppUser", b =>
+                {
+                    b.Navigation("Sections");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.Recruit", b =>
+                {
+                    b.Navigation("Applications");
                 });
 #pragma warning restore 612, 618
         }
