@@ -6,13 +6,14 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 import { ApiError } from './api'
 import { meKey } from './auth'
-import { Layout, RequireAdmin, Todo } from './Layout'
+import { Layout, RequireAdmin } from './Layout'
 import { LinksPage } from './pages/admin/LinksPage'
 import { RecruitmentPage } from './pages/admin/RecruitmentPage'
 import { SectionsPage } from './pages/admin/SectionsPage'
 import { UsersPage } from './pages/admin/UsersPage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
 import { BookingPage } from './pages/BookingPage'
+import { InterviewsPage } from './pages/InterviewsPage'
 import { LoginPage } from './pages/LoginPage'
 
 const queryClient: QueryClient = new QueryClient({
@@ -33,7 +34,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/interviews" replace /> },
       { path: 'availability', element: <AvailabilityPage /> },
-      { path: 'interviews', element: <Todo title="Interviews" /> },
+      { path: 'interviews', element: <InterviewsPage /> },
       {
         path: 'admin',
         element: <RequireAdmin />,
