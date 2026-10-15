@@ -18,7 +18,7 @@ public static class Invitations
         ["pl"] = new(
             "Zaproszenie na rozmowę rekrutacyjną – {sections}",
             """
-            Cześć {name}!
+            Cześć {firstName}!
 
             Dziękujemy za zgłoszenie do naszego koła naukowego. Zapraszamy Cię na krótką rozmowę rekrutacyjną ({sections}).
 
@@ -34,7 +34,7 @@ public static class Invitations
         ["en"] = new(
             "Invitation to a recruitment interview – {sections}",
             """
-            Hi {name}!
+            Hi {firstName}!
 
             Thank you for applying to our scientific circle. We'd like to invite you to a short recruitment interview ({sections}).
 
@@ -49,7 +49,7 @@ public static class Invitations
             """),
     };
 
-    public static readonly string[] Placeholders = ["{name}", "{link}", "{sections}", "{deadline}", "{contact}"];
+    public static readonly string[] Placeholders = ["{firstName}", "{name}", "{link}", "{sections}", "{deadline}", "{contact}"];
 
     public static async Task<Template> GetAsync(AppDbContext db, string language)
     {
@@ -63,6 +63,7 @@ public static class Invitations
         var culture = CultureInfo.GetCultureInfo(language);
         var values = new Dictionary<string, string>
         {
+            ["{firstName}"] = v.Name?.Trim().Split(' ')[0] ?? "",
             ["{name}"] = v.Name?.Trim() ?? "",
             ["{link}"] = v.Link,
             ["{sections}"] = string.Join(", ", v.Sections),

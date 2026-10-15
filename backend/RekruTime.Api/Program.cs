@@ -78,6 +78,7 @@ app.MapUserEndpoints();
 app.MapAvailabilityEndpoints();
 app.MapSettingsEndpoints();
 app.MapBookingLinkEndpoints();
+app.MapImportEndpoints();
 app.MapPublicBookingEndpoints();
 app.MapInterviewEndpoints();
 app.MapRecruitEndpoints();

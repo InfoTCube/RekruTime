@@ -18,7 +18,20 @@ in production as environment variables (`Email__Host`, …), never stored in the
 After changing settings restart the app, then **Admin → E-mail → Send test e-mail to me**. If it fails, the
 SMTP error is shown there.
 
-## Option A – club address via Gmail (try first)
+## Recommended – dedicated sending account + replies to the university address
+
+If the university address can't send through apps (the common case), create a **separate account only for sending**
+(e.g. a new Gmail like `rekrutacja.kolo.xyz@gmail.com` → option A steps, or a Brevo account → option B) and let replies
+go to the university inbox. Recruits see the club's name as the sender; "Reply" goes to the university address:
+
+```
+od:            Koło XYZ – Rekrutacja <rekrutacja.kolo.xyz@gmail.com>     ← Email__FromName + Email__FromAddress
+odpowiedz do:  kolo.xyz@pwr.edu.pl                                         ← Email__ReplyTo
+```
+
+Also set `Club__ContactEmail` to the university address – it's the `{contact}` in the invitation and on the booking page.
+
+## Option A – via Gmail (club address if allowed, or the dedicated account)
 
 Works if the university's Google Workspace allows app passwords.
 

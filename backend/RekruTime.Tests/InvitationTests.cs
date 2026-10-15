@@ -9,13 +9,13 @@ public class InvitationTests
     [Fact]
     public void Fills_every_placeholder_with_language_specific_date()
     {
-        var t = new Template("{sections} – {name}", "{name}|{link}|{sections}|{deadline}|{contact}");
+        var t = new Template("{sections} – {name}", "{firstName}|{name}|{link}|{sections}|{deadline}|{contact}");
 
         var pl = Invitations.Render(t, Jan, "pl");
         var en = Invitations.Render(t, Jan, "en");
 
         Assert.Equal("AI, Web – Jan Kowalski", pl.Subject);
-        Assert.Equal("Jan Kowalski|https://r.example/book/tok|AI, Web|12 listopada 2026|rekrutacja@kolo.pl", pl.Body);
+        Assert.Equal("Jan|Jan Kowalski|https://r.example/book/tok|AI, Web|12 listopada 2026|rekrutacja@kolo.pl", pl.Body);
         Assert.EndsWith("|12 November 2026|rekrutacja@kolo.pl", en.Body);
     }
 
@@ -24,7 +24,7 @@ public class InvitationTests
     {
         var anonymous = Jan with { Name = null, Contact = null };
 
-        var r = Invitations.Render(new Template("x", "Cześć {name}! Pisz: {contact}"), anonymous, "pl");
+        var r = Invitations.Render(new Template("x", "Cześć {firstName}! Pisz: {contact}"), anonymous, "pl");
 
         Assert.Equal("Cześć! Pisz:", r.Body);
     }

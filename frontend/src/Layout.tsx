@@ -9,6 +9,7 @@ const nav = [
   { to: '/availability', label: 'My availability' },
   { to: '/interviews', label: 'Interviews' },
   { to: '/admin/recruitment', label: 'Recruitment period', admin: true },
+  { to: '/admin/import', label: 'Import recruits', admin: true },
   { to: '/admin/links', label: 'Booking links', admin: true },
   { to: '/admin/users', label: 'Users', admin: true },
   { to: '/admin/sections', label: 'Sections', admin: true },
