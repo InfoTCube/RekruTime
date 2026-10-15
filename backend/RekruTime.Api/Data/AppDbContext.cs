@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Recruit> Recruits => Set<Recruit>();
     public DbSet<Application> Applications => Set<Application>();
     public DbSet<Interview> Interviews => Set<Interview>();
+    public DbSet<RecruitmentSettings> RecruitmentSettings => Set<RecruitmentSettings>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder b)
     {
@@ -43,6 +44,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<BookingLink>().Property(l => l.Token).HasMaxLength(32);
         b.Entity<BookingLink>().HasOne<AppUser>().WithMany().HasForeignKey(l => l.CreatedById).OnDelete(DeleteBehavior.SetNull);
         b.Entity<BookingLink>().HasMany(l => l.Sections).WithMany().UsingEntity("BookingLinkSections");
+
+        b.Entity<RecruitmentSettings>().Property(s => s.Id).ValueGeneratedNever();
+        b.Entity<RecruitmentSettings>().ToTable(t => t.HasCheckConstraint("CK_RecruitmentSettings_Single", "\"Id\" = 1"));
 
         b.Entity<Recruit>().HasIndex(r => r.Email).IsUnique();
 
