@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RekruTime.Api.Common;
@@ -49,8 +50,11 @@ builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInter
 builder.Services.AddAuthorization(o => o.AddPolicy(Roles.Admin, p => p.RequireRole(Roles.Admin)));
 builder.Services.AddValidation(); // DataAnnotations on endpoint parameters → 400 ValidationProblem
 builder.Services.AddProblemDetails();
+// Login cookies are encrypted with these keys – on a volume they survive restarts/redeploys (Docker image sets the path).
+if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
+    builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 // Public booking endpoints: per-IP limit against token guessing / spam.
-// ponytail: behind a reverse proxy RemoteIpAddress is the proxy – forwarded headers come with deployment (#21).
+// Behind a reverse proxy the client IP comes from X-Forwarded-For: ASPNETCORE_FORWARDEDHEADERS_ENABLED=true (set in the Dockerfile).
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
