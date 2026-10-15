@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using RekruTime.Api.Data;
 
 namespace RekruTime.Api.Features.Booking;
@@ -61,49 +60,64 @@ public static class PublicBookingEndpoints
         {
             if (!req.GdprConsent)
                 return Results.ValidationProblem(new Dictionary<string, string[]> { ["GdprConsent"] = ["Consent is required to book an interview."] });
-            var link = await Find(db, token);
-            if (Unavailable(link) is { } gone) return gone;
-            if (await Booking(db, link!.Id) is not null) return AlreadyBooked();
-
-            // Recompute with the same calculator the page used – the slot must still be free right now.
-            var start = req.Start.UtcDateTime;
-            var sectionIds = link.Sections.Select(s => s.Id).ToList();
-            var duration = TimeSpan.FromMinutes(link.Sections.Max(s => s.InterviewDurationMinutes));
-            var buffer = TimeSpan.FromMinutes(link.Sections.Max(s => s.BufferMinutes));
-            var data = await SlotData.LoadAsync(db, club, sectionIds, start, start + duration + buffer);
-            var slot = data is { } d ? SlotCalculator.Calculate(d.Query).FirstOrDefault(s => s.Start == start) : null;
-            if (slot is null) return Results.Problem("This time is no longer available. Please pick another one.", statusCode: 409);
-
-            var recruit = await RecruitFor(db, link, req);
-            foreach (var section in link.Sections.Where(s => !recruit.Applications.Any(a => a.SectionId == s.Id)))
-                recruit.Applications.Add(new Application { SectionId = section.Id });
-
-            db.Interviews.Add(new Interview
-            {
-                Recruit = recruit,
-                BookingLinkId = link.Id,
-                Start = slot.Start,
-                End = slot.End,
-                BlockedUntil = slot.End + buffer,
-                Sections = link.Sections,
-                Interviewers = await db.Users.Where(u => slot.Team.Contains(u.Id)).ToListAsync(),
-            });
-
             try
             {
-                await db.SaveChangesAsync();
+                return await Book(token, req, db, club);
             }
-            // The DB is the final judge for races: two recruits clicking the same time, or one link booked twice.
-            catch (DbUpdateException e) when (e.InnerException is PostgresException { SqlState: PostgresErrorCodes.ExclusionViolation })
+            // Double click / two tabs on a link without a recruit: both requests create the same new recruit and one
+            // loses on the unique e-mail. Retry once – it now finds that recruit (and "already booked" for the same link).
+            catch (Exception e) when (DbErrors.IsUniqueViolation(e, "IX_Recruits_Email"))
             {
-                return Results.Problem("Someone has just booked this time. Please pick another one.", statusCode: 409);
+                db.ChangeTracker.Clear();
+                return await Book(token, req, db, club);
             }
-            catch (DbUpdateException e) when (e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_Interviews_OneBookingPerLink" })
-            {
-                return AlreadyBooked();
-            }
-            return Results.Ok(new BookingDto(slot.Start, slot.End));
         });
+    }
+
+    static async Task<IResult> Book(string token, BookRequest req, AppDbContext db, TimeZoneInfo club)
+    {
+        var link = await Find(db, token);
+        if (Unavailable(link) is { } gone) return gone;
+        if (await Booking(db, link!.Id) is not null) return AlreadyBooked();
+
+        // Recompute with the same calculator the page used – the slot must still be free right now.
+        var start = req.Start.UtcDateTime;
+        var sectionIds = link.Sections.Select(s => s.Id).ToList();
+        var duration = TimeSpan.FromMinutes(link.Sections.Max(s => s.InterviewDurationMinutes));
+        var buffer = TimeSpan.FromMinutes(link.Sections.Max(s => s.BufferMinutes));
+        var data = await SlotData.LoadAsync(db, club, sectionIds, start, start + duration + buffer);
+        var slot = data is { } d ? SlotCalculator.Calculate(d.Query).FirstOrDefault(s => s.Start == start) : null;
+        if (slot is null) return Results.Problem("This time is no longer available. Please pick another one.", statusCode: 409);
+
+        var recruit = await RecruitFor(db, link, req);
+        foreach (var section in link.Sections.Where(s => !recruit.Applications.Any(a => a.SectionId == s.Id)))
+            recruit.Applications.Add(new Application { SectionId = section.Id });
+
+        db.Interviews.Add(new Interview
+        {
+            Recruit = recruit,
+            BookingLinkId = link.Id,
+            Start = slot.Start,
+            End = slot.End,
+            BlockedUntil = slot.End + buffer,
+            Sections = link.Sections,
+            Interviewers = await db.Users.Where(u => slot.Team.Contains(u.Id)).ToListAsync(),
+        });
+
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        // The DB is the final judge for races: two recruits clicking the same time, or one link booked twice.
+        catch (Exception e) when (DbErrors.IsRoomTaken(e))
+        {
+            return Results.Problem("Someone has just booked this time. Please pick another one.", statusCode: 409);
+        }
+        catch (Exception e) when (DbErrors.IsUniqueViolation(e, "IX_Interviews_OneBookingPerLink"))
+        {
+            return AlreadyBooked();
+        }
+        return Results.Ok(new BookingDto(slot.Start, slot.End));
     }
 
     static Task<BookingLink?> Find(AppDbContext db, string token) =>
