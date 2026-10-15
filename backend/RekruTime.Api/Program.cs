@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RekruTime.Api.Data;
 using RekruTime.Api.Features.Auth;
 using RekruTime.Api.Features.Availability;
+using RekruTime.Api.Features.Booking;
 using RekruTime.Api.Features.Sections;
 using RekruTime.Api.Features.Settings;
 using RekruTime.Api.Features.Users;
@@ -13,6 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton(TimeZoneInfo.FindSystemTimeZoneById(builder.Configuration["Club:TimeZone"]!)); // dates → UTC
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(o => o.User.RequireUniqueEmail = true)
     .AddEntityFrameworkStores<AppDbContext>()
@@ -56,6 +59,7 @@ app.MapSectionEndpoints();
 app.MapUserEndpoints();
 app.MapAvailabilityEndpoints();
 app.MapSettingsEndpoints();
+app.MapBookingLinkEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
 app.MapFallbackToFile("index.html");                        // client-side routes
