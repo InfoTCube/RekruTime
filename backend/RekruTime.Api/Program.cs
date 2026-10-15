@@ -1,3 +1,4 @@
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RekruTime.Api.Data;
@@ -25,6 +26,15 @@ builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInter
 builder.Services.AddAuthorization(o => o.AddPolicy(Roles.Admin, p => p.RequireRole(Roles.Admin)));
 builder.Services.AddValidation(); // DataAnnotations on endpoint parameters → 400 ValidationProblem
 builder.Services.AddProblemDetails();
+// Public booking endpoints: per-IP limit against token guessing / spam.
+// ponytail: behind a reverse proxy RemoteIpAddress is the proxy – forwarded headers come with deployment (#21).
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy(PublicBookingEndpoints.RateLimitPolicy, http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
+});
 builder.Services.ConfigureApplicationCookie(o =>
 {
     o.Cookie.Name = "rekrutime.auth";
@@ -51,6 +61,7 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapGet("/api/health", async (AppDbContext db) =>
     await db.Database.CanConnectAsync() ? Results.Ok(new { status = "ok" }) : Results.StatusCode(503));
@@ -60,6 +71,7 @@ app.MapUserEndpoints();
 app.MapAvailabilityEndpoints();
 app.MapSettingsEndpoints();
 app.MapBookingLinkEndpoints();
+app.MapPublicBookingEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
 app.MapFallbackToFile("index.html");                        // client-side routes
