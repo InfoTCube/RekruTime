@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RekruTime.Api.Data;
 using RekruTime.Api.Features.Auth;
+using RekruTime.Api.Features.Sections;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +13,9 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(o => o.User.RequireUniqueEmail = true)
     .AddEntityFrameworkStores<AppDbContext>();
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(o => o.AddPolicy(Roles.Admin, p => p.RequireRole(Roles.Admin)));
+builder.Services.AddValidation(); // DataAnnotations on endpoint parameters → 400 ValidationProblem
+builder.Services.AddProblemDetails();
 builder.Services.ConfigureApplicationCookie(o =>
 {
     o.Cookie.Name = "rekrutime.auth";
@@ -43,6 +46,7 @@ app.UseAuthorization();
 app.MapGet("/api/health", async (AppDbContext db) =>
     await db.Database.CanConnectAsync() ? Results.Ok(new { status = "ok" }) : Results.StatusCode(503));
 app.MapAuthEndpoints();
+app.MapSectionEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
 app.MapFallbackToFile("index.html");                        // client-side routes
