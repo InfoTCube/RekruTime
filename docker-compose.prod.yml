@@ -32,6 +32,29 @@ services:
       timeout: 5s
       retries: 5
 
+  # Daily database dump to ./backups (next to this file), kept 14 days. First dump right after start.
+  # ponytail: sleep loop, not cron – fine for daily; copy ./backups off the server too.
+  backup:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ./backups:/backups
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          f=/backups/rekrutime-$$(date +%F).dump
+          if pg_dump -h db -U rekrutime -Fc rekrutime > $$f.tmp; then mv $$f.tmp $$f && echo "backup ok: $$f"; else echo "backup FAILED"; fi
+          find /backups -name 'rekrutime-*.dump' -mtime +14 -delete
+          sleep 86400
+        done
+    depends_on:
+      app:
+        condition: service_healthy # migrations applied
+
   caddy:
     image: caddy:2
     profiles: [caddy]
