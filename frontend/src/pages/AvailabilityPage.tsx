@@ -6,7 +6,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import { Alert, Group, SegmentedControl, Stack, Text, Title } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { api, errorMessage } from '../api'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { formatDay, periodRange, useRecruitmentPeriod } from '../recruitment'
@@ -25,7 +25,8 @@ export function AvailabilityPage() {
   const [range, setRange] = useState<Range | null>(null) // visible dates
   const [removing, setRemoving] = useState<Range | null>(null)
   const period = useRecruitmentPeriod()
-  const validRange = period.data && periodRange(period.data)
+  // Memoized: a new object every render makes FullCalendar re-fire datesSet → setState → render → infinite loop.
+  const validRange = useMemo(() => period.data && periodRange(period.data), [period.data])
 
   const key = ['availability', range?.start.toISOString(), range?.end.toISOString()]
   const blocks = useQuery({
@@ -107,7 +108,8 @@ export function AvailabilityPage() {
         selectLongPressDelay={300}
         selectAllow={(s) => s.start >= new Date()}
         select={onSelect}
-        datesSet={(d) => setRange({ start: d.start, end: d.end })}
+        // Only update when the visible dates really change (FullCalendar also fires this on option updates).
+        datesSet={(d) => setRange((r) => (r?.start.getTime() === d.start.getTime() && r?.end.getTime() === d.end.getTime() ? r : { start: d.start, end: d.end }))}
         events={(blocks.data ?? []).map((b) => ({ id: String(b.id), start: b.start, end: b.end, title: 'Available', color: 'var(--mantine-color-green-6)' }))}
         eventClick={onEventClick}
       />
