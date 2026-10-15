@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using RekruTime.Api.Common;
 using RekruTime.Api.Data;
 using RekruTime.Api.Features.Auth;
 using RekruTime.Api.Features.Availability;
@@ -18,11 +19,26 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 builder.Services.AddOpenApi();
+builder.Services.Configure<ClubOptions>(builder.Configuration.GetSection("Club"));
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
 builder.Services.AddSingleton<SmtpMailer>();
 builder.Services.AddSingleton<EmailSender>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<EmailSender>()); // delivers the outbox
-builder.Services.AddSingleton(TimeZoneInfo.FindSystemTimeZoneById(builder.Configuration["Club:TimeZone"]!)); // dates → UTC
+
+// Business logic lives in services; endpoints only translate HTTP ↔ service calls.
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<SectionService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<AvailabilityService>();
+builder.Services.AddScoped<SettingsService>();
+builder.Services.AddScoped<SlotService>();
+builder.Services.AddScoped<BookingLinkService>();
+builder.Services.AddScoped<ImportService>();
+builder.Services.AddScoped<PublicBookingService>();
+builder.Services.AddScoped<InterviewService>();
+builder.Services.AddScoped<RecruitService>();
+builder.Services.AddScoped<InvitationService>();
+builder.Services.AddScoped<EmailService>();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(o => o.User.RequireUniqueEmail = true)
@@ -78,7 +94,6 @@ app.MapUserEndpoints();
 app.MapAvailabilityEndpoints();
 app.MapSettingsEndpoints();
 app.MapBookingLinkEndpoints();
-app.MapImportEndpoints();
 app.MapPublicBookingEndpoints();
 app.MapInterviewEndpoints();
 app.MapRecruitEndpoints();
