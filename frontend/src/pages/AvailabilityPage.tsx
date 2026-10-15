@@ -9,6 +9,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useState } from 'react'
 import { api, errorMessage } from '../api'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { formatDay, periodRange, useRecruitmentPeriod } from '../recruitment'
 import '../calendar.css'
 
 type Block = { id: number; start: string; end: string }
@@ -23,6 +24,8 @@ export function AvailabilityPage() {
   const [mode, setMode] = useState<'add' | 'remove'>('add')
   const [range, setRange] = useState<Range | null>(null) // visible dates
   const [removing, setRemoving] = useState<Range | null>(null)
+  const period = useRecruitmentPeriod()
+  const validRange = period.data && periodRange(period.data)
 
   const key = ['availability', range?.start.toISOString(), range?.end.toISOString()]
   const blocks = useQuery({
@@ -71,6 +74,14 @@ export function AvailabilityPage() {
         {mode === 'add' ? 'Drag over the calendar to mark when you can interview.' : 'Drag over a period to remove it from your availability.'} Click a block to
         remove it. {isPhone && 'On a phone, press and hold, then drag.'}
       </Text>
+      {period.data &&
+        (validRange ? (
+          <Text size="sm">
+            Recruitment period: <b>{formatDay(period.data.interviewsFrom!)}</b> – <b>{formatDay(period.data.interviewsTo!)}</b>
+          </Text>
+        ) : (
+          <Alert color="gray">No recruitment period is set yet, so recruits can't book. You can still add your availability.</Alert>
+        ))}
       {(add.isError || blocks.isError) && <Alert color="red">{errorMessage(add.error ?? blocks.error)}</Alert>}
 
       <FullCalendar
@@ -80,6 +91,7 @@ export function AvailabilityPage() {
         key={isPhone ? 'phone' : 'desktop'} // re-mount when the view type changes
         views={{ timeGrid3Day: { type: 'timeGrid', duration: { days: 3 }, buttonText: '3 days' } }}
         headerToolbar={{ left: 'prev,next today', center: 'title', right: '' }}
+        validRange={validRange ?? undefined}
         firstDay={1}
         allDaySlot={false}
         nowIndicator

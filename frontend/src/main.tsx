@@ -7,6 +7,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 import { ApiError } from './api'
 import { meKey } from './auth'
 import { Layout, RequireAdmin, Todo } from './Layout'
+import { RecruitmentPage } from './pages/admin/RecruitmentPage'
 import { SectionsPage } from './pages/admin/SectionsPage'
 import { UsersPage } from './pages/admin/UsersPage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
         path: 'admin',
         element: <RequireAdmin />,
         children: [
+          { path: 'recruitment', element: <RecruitmentPage /> },
           { path: 'links', element: <Todo title="Booking links" /> },
           { path: 'users', element: <UsersPage /> },
           { path: 'sections', element: <SectionsPage /> },
