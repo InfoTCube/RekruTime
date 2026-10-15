@@ -1,6 +1,4 @@
 using System.Globalization;
-using Microsoft.EntityFrameworkCore;
-using RekruTime.Api.Data;
 
 namespace RekruTime.Api.Features.Email;
 
@@ -8,6 +6,7 @@ public record Template(string Subject, string Body);
 
 public record InvitationValues(string? Name, string Link, IEnumerable<string> Sections, DateOnly? Deadline, string? Contact);
 
+// Built-in invitation texts and rendering – pure, no DB (InvitationService loads/edits/queues).
 public static class Invitations
 {
     public const string Key = "invitation";
@@ -51,13 +50,6 @@ public static class Invitations
 
     public static readonly string[] Placeholders = ["{firstName}", "{name}", "{link}", "{sections}", "{deadline}", "{contact}"];
 
-    public static async Task<Template> GetAsync(AppDbContext db, string language)
-    {
-        var lang = Defaults.ContainsKey(language) ? language : "pl";
-        var custom = await db.EmailTemplates.FindAsync(Key, lang);
-        return custom is null ? Defaults[lang] : new Template(custom.Subject, custom.Body);
-    }
-
     public static Template Render(Template t, InvitationValues v, string language)
     {
         var culture = CultureInfo.GetCultureInfo(language);
@@ -79,25 +71,5 @@ public static class Invitations
         foreach (var (key, value) in values)
             text = value == "" ? text.Replace(" " + key, "").Replace(key, "") : text.Replace(key, value);
         return text;
-    }
-
-    // Queues the invitation for each link that has a recruit e-mail. Caller saves.
-    public static async Task<int> QueueAsync(AppDbContext db, IConfiguration config, IReadOnlyCollection<BookingLink> links)
-    {
-        var period = await db.RecruitmentSettings.FindAsync(1);
-        var baseUrl = (config["Club:PublicUrl"] ?? "").TrimEnd('/');
-        var queued = 0;
-        foreach (var link in links.Where(l => l.Recruit is not null))
-        {
-            var mail = Render(await GetAsync(db, link.Language), new InvitationValues(
-                link.Recruit!.FullName, $"{baseUrl}/book/{link.Token}", link.Sections.Select(s => s.Name).Order(),
-                period?.InterviewsTo, config["Club:ContactEmail"]), link.Language);
-            db.EmailMessages.Add(new EmailMessage
-            {
-                To = link.Recruit.Email, ToName = link.Recruit.FullName, Subject = mail.Subject, Body = mail.Body, BookingLinkId = link.Id,
-            });
-            queued++;
-        }
-        return queued;
     }
 }

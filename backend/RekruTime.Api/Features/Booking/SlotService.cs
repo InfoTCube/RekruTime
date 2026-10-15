@@ -1,23 +1,27 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using RekruTime.Api.Common;
 using RekruTime.Api.Data;
 
 namespace RekruTime.Api.Features.Booking;
 
+public record SlotData(SlotQuery Query, Dictionary<string, string> Names);
+
 // Loads everything SlotCalculator needs for a set of sections. Shared by the admin preview and public booking.
-public static class SlotData
+public class SlotService(AppDbContext db, IOptions<ClubOptions> club)
 {
     // ponytail: constant; make it a setting if the board wants to change it.
     public static readonly TimeSpan MinNotice = TimeSpan.FromHours(12);
 
     /// <returns>null when booking is closed (no recruitment period) or the range is outside it.</returns>
-    public static async Task<(SlotQuery Query, Dictionary<string, string> Names)?> LoadAsync(
-        AppDbContext db, TimeZoneInfo club, IReadOnlyCollection<int> sectionIds, DateTime from, DateTime to)
+    public async Task<SlotData?> LoadAsync(IReadOnlyCollection<int> sectionIds, DateTime from, DateTime to)
     {
         // Clamp to the recruitment period (club dates → UTC) and minimum notice.
         var period = await db.RecruitmentSettings.FindAsync(1);
         if (period is not { InterviewsFrom: { } pFrom, InterviewsTo: { } pTo }) return null;
-        from = Max(from, TimeZoneInfo.ConvertTimeToUtc(pFrom.ToDateTime(TimeOnly.MinValue), club), DateTime.UtcNow + MinNotice);
-        to = Min(to, TimeZoneInfo.ConvertTimeToUtc(pTo.AddDays(1).ToDateTime(TimeOnly.MinValue), club));
+        var zone = club.Value.Zone;
+        from = new[] { from, TimeZoneInfo.ConvertTimeToUtc(pFrom.ToDateTime(TimeOnly.MinValue), zone), DateTime.UtcNow + MinNotice }.Max();
+        to = new[] { to, TimeZoneInfo.ConvertTimeToUtc(pTo.AddDays(1).ToDateTime(TimeOnly.MinValue), zone) }.Min();
         if (from >= to) return null;
 
         var sections = await db.Sections.Where(s => sectionIds.Contains(s.Id)).ToListAsync();
@@ -52,9 +56,6 @@ public static class SlotData
             from, to,
             people.Select(p => new Interviewer(p.Id, p.IsAdmin, p.Sections.ToHashSet(), availability[p.Id].ToList(), p.Load)).ToList(),
             busy);
-        return (query, people.ToDictionary(p => p.Id, p => p.DisplayName));
+        return new SlotData(query, people.ToDictionary(p => p.Id, p => p.DisplayName));
     }
-
-    static DateTime Max(params DateTime[] d) => d.Max();
-    static DateTime Min(params DateTime[] d) => d.Min();
 }
