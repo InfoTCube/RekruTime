@@ -90,6 +90,7 @@ public static class PublicBookingEndpoints
         if (slot is null) return Results.Problem("This time is no longer available. Please pick another one.", statusCode: 409);
 
         var recruit = await RecruitFor(db, link, req);
+        link.Recruit ??= recruit; // anonymous link → now belongs to this recruit (import sees them as invited)
         foreach (var section in link.Sections.Where(s => !recruit.Applications.Any(a => a.SectionId == s.Id)))
             recruit.Applications.Add(new Application { SectionId = section.Id });
 

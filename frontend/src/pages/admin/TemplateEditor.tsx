@@ -9,7 +9,8 @@ type Rendered = { subject: string; body: string }
 
 const languageNames: Record<string, string> = { pl: 'Polski', en: 'English' }
 const placeholders: [string, string][] = [
-  ['{name}', "recruit's name"],
+  ['{firstName}', 'first name'],
+  ['{name}', 'full name'],
   ['{link}', 'personal booking link'],
   ['{sections}', 'their sections'],
   ['{deadline}', 'last interview day'],
