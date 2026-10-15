@@ -11,12 +11,16 @@
     "test": "node scripts/csv-check.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fullcalendar/core": "^6.1.21",
     "@fullcalendar/interaction": "^6.1.21",
     "@fullcalendar/react": "^6.1.21",
     "@fullcalendar/timegrid": "^6.1.21",
     "@mantine/core": "^9.7.2",
     "@mantine/hooks": "^9.7.2",
+    "@mantine/notifications": "^9.7.2",
+    "@tabler/icons-react": "^3.49.0",
     "@tanstack/react-query": "^5.104.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

@@ -23,6 +23,16 @@ public static class SlotCalculator
 {
     public static readonly TimeSpan Step = TimeSpan.FromMinutes(15);
 
+    // How many more interviews fit: greedily take the earliest slot, skip everything overlapping it.
+    // ponytail: per section – sections share people and the room, so totals across sections overestimate.
+    public static int Capacity(IEnumerable<Slot> slots, TimeSpan block)
+    {
+        var (count, nextFree) = (0, DateTime.MinValue);
+        foreach (var s in slots.OrderBy(s => s.Start))
+            if (s.Start >= nextFree) (count, nextFree) = (count + 1, s.Start + block);
+        return count;
+    }
+
     public static IEnumerable<Slot> Calculate(SlotQuery q)
     {
         var block = q.Duration + q.Buffer; // room and interviewers are needed for the buffer too

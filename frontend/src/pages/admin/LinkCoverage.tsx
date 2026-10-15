@@ -1,7 +1,8 @@
-import { Alert, Badge, Group, Loader, Stack, Text, Tooltip } from '@mantine/core'
+import { Alert, Badge, Group, Skeleton, Stack, Text, Tooltip } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { api, errorMessage } from '../../api'
 import { periodRange, useRecruitmentPeriod } from '../../recruitment'
+import { slotColor } from '../../theme'
 
 type PreviewSlot = { start: string; end: string; color: 'Green' | 'Yellow'; team: string[] }
 
@@ -18,9 +19,9 @@ export function LinkCoverage({ linkId }: { linkId: number }) {
     enabled: !!range,
   })
 
-  if (period.data && !range) return <Alert color="gray">No recruitment period is set, so there are no slots.</Alert>
+  if (period.data && !range) return <Alert color="cortex">No recruitment period is set, so there are no slots.</Alert>
   if (slots.isError) return <Alert color="red">{errorMessage(slots.error)}</Alert>
-  if (!slots.data) return <Loader />
+  if (!slots.data) return <Skeleton height={200} />
   if (slots.data.length === 0)
     return <Alert color="orange">No free times. Ask recruiters from these sections to add availability.</Alert>
 
@@ -42,7 +43,7 @@ export function LinkCoverage({ linkId }: { linkId: number }) {
           <Group gap={6}>
             {daySlots.map((s) => (
               <Tooltip key={s.start} label={s.team.join(' + ')}>
-                <Badge variant="light" color={s.color === 'Green' ? 'green' : 'yellow'} radius="sm">
+                <Badge variant="light" color={slotColor[s.color]} radius="sm">
                   {timeLabel(new Date(s.start))}
                 </Badge>
               </Tooltip>

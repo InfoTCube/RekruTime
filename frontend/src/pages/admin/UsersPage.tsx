@@ -1,9 +1,12 @@
-import { ActionIcon, Alert, Badge, Button, Code, CopyButton, Group, Loader, Modal, MultiSelect, SegmentedControl, Stack, Table, Text, TextInput, Title } from '@mantine/core'
+import { ActionIcon, Alert, Badge, Button, Code, CopyButton, Group, Modal, MultiSelect, SegmentedControl, Stack, Table, Text, TextInput } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, errorMessage, fieldError } from '../../api'
 import { useMe } from '../../auth'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { PageHeader, TableSkeleton } from '../../components/Page'
+import { notifySuccess } from '../../notify'
+import { IconPlus, IconTrash } from '@tabler/icons-react'
 import { useSections } from '../../sections'
 
 type User = { id: string; email: string; displayName: string; role: 'Admin' | 'Recruiter'; sectionIds: number[] }
@@ -35,12 +38,13 @@ export function UsersPage() {
     onSuccess: (result) => {
       refresh()
       setEditing(null)
+      if (!('temporaryPassword' in result)) notifySuccess('User saved.')
       if ('temporaryPassword' in result) setPassword({ user: result.user.email, password: result.temporaryPassword })
     },
   })
   const remove = useMutation({
     mutationFn: (u: User) => api(`/api/users/${u.id}`, { method: 'DELETE' }),
-    onSuccess: () => (refresh(), setDeleting(null)),
+    onSuccess: () => (notifySuccess('User deleted.'), refresh(), setDeleting(null)),
   })
   const reset = useMutation({
     mutationFn: (u: User) => api<{ temporaryPassword: string }>(`/api/users/${u.id}/reset-password`, { method: 'POST' }),
@@ -49,12 +53,13 @@ export function UsersPage() {
 
   return (
     <Stack>
-      <Group justify="space-between">
-        <Title order={2}>Users</Title>
-        <Button onClick={() => (save.reset(), setEditing('new'))}>Add user</Button>
-      </Group>
+      <PageHeader title="Users" description="Admins manage the recruitment; recruiters add their availability and see their own interviews.">
+        <Button leftSection={<IconPlus size={16} />} onClick={() => (save.reset(), setEditing('new'))}>
+          Add user
+        </Button>
+      </PageHeader>
 
-      {users.isPending && <Loader />}
+      {users.isPending && <TableSkeleton />}
       {users.isError && <Alert color="red">{errorMessage(users.error)}</Alert>}
       {users.data && (
         <Table.ScrollContainer minWidth={640}>
@@ -78,7 +83,7 @@ export function UsersPage() {
                     </Table.Td>
                     <Table.Td>{u.email}</Table.Td>
                     <Table.Td>
-                      <Badge variant="light" color={u.role === 'Admin' ? 'grape' : 'blue'}>
+                      <Badge variant="light" color={u.role === 'Admin' ? 'cortex' : 'signal'}>
                         {u.role === 'Admin' ? 'Admin (board)' : 'Recruiter'}
                       </Badge>
                     </Table.Td>
@@ -100,7 +105,7 @@ export function UsersPage() {
                           Reset password
                         </Button>
                         <ActionIcon variant="subtle" color="red" disabled={isMe} aria-label={`Delete ${u.displayName}`} onClick={() => (remove.reset(), setDeleting(u))}>
-                          ✕
+                          <IconTrash size={16} />
                         </ActionIcon>
                       </Group>
                     </Table.Td>

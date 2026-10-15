@@ -6,12 +6,28 @@ using RekruTime.Api.Data;
 namespace RekruTime.Api.Features.Booking;
 
 public record SlotData(SlotQuery Query, Dictionary<string, string> Names);
+public record SectionCapacityDto(int SectionId, string Name, int Green, int WithYellow); // interviews that still fit
 
 // Loads everything SlotCalculator needs for a set of sections. Shared by the admin preview and public booking.
 public class SlotService(AppDbContext db, IOptions<ClubOptions> club)
 {
     // ponytail: constant; make it a setting if the board wants to change it.
     public static readonly TimeSpan MinNotice = TimeSpan.FromHours(12);
+
+    // Overview dashboard: remaining capacity of each section for the rest of the recruitment period.
+    public async Task<List<SectionCapacityDto>> CapacityAsync()
+    {
+        var result = new List<SectionCapacityDto>();
+        foreach (var section in await db.Sections.OrderBy(s => s.Name).ToListAsync())
+        {
+            var data = await LoadAsync([section.Id], DateTime.UtcNow, DateTime.MaxValue);
+            var all = data is null ? [] : SlotCalculator.Calculate(data.Query).ToList();
+            var block = TimeSpan.FromMinutes(section.InterviewDurationMinutes + section.BufferMinutes);
+            result.Add(new(section.Id, section.Name,
+                SlotCalculator.Capacity(all.Where(s => s.Color == SlotColor.Green), block), SlotCalculator.Capacity(all, block)));
+        }
+        return result;
+    }
 
     /// <returns>null when booking is closed (no recruitment period) or the range is outside it.</returns>
     public async Task<SlotData?> LoadAsync(IReadOnlyCollection<int> sectionIds, DateTime from, DateTime to)

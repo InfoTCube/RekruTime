@@ -3,7 +3,12 @@ export const pl = {
   name: 'Polski',
   locale: 'pl-PL', // dates and times
 
+  recruitment: 'Rekrutacja',
   title: 'Zarezerwuj rozmowę rekrutacyjną',
+  stepDay: 'Wybierz dzień',
+  stepTime: 'Wybierz godzinę',
+  stepDetails: 'Podaj swoje dane',
+  bookedNote: 'Zapisaliśmy Twój termin. Do zobaczenia!',
   linkInvalid: 'Ten link jest nieprawidłowy',
   linkExpired: 'Ten link wygasł',
   linkProblemHelp: 'Skontaktuj się z osobą, która go wysłała.',

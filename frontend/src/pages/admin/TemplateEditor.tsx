@@ -1,8 +1,9 @@
-import { Alert, Badge, Button, Code, Group, Loader, Paper, SimpleGrid, Stack, Tabs, Text, Textarea, TextInput, Title } from '@mantine/core'
+import { Alert, Badge, Button, Code, Group, Loader, Paper, Skeleton, SimpleGrid, Stack, Tabs, Text, Textarea, TextInput, Title } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, errorMessage, fieldError } from '../../api'
+import { notifySuccess } from '../../notify'
 
 type Template = { key: string; language: string; subject: string; body: string; isDefault: boolean }
 type Rendered = { subject: string; body: string; html: string }
@@ -19,7 +20,7 @@ const placeholders: [string, string][] = [
 
 export function TemplateEditor() {
   const templates = useQuery({ queryKey: ['email-templates'], queryFn: () => api<Template[]>('/api/email/templates') })
-  if (templates.isPending) return <Loader />
+  if (templates.isPending) return <Skeleton height={320} />
   if (templates.isError) return <Alert color="red">{errorMessage(templates.error)}</Alert>
 
   return (
@@ -66,7 +67,10 @@ function TemplateForm({ template }: { template: Template }) {
     enabled: !!debounced.subject && !!debounced.body,
   })
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['email-templates'] })
-  const save = useMutation({ mutationFn: () => api(url, { method: 'PUT', json: { subject, body } }), onSuccess: refresh })
+  const save = useMutation({
+    mutationFn: () => api(url, { method: 'PUT', json: { subject, body } }),
+    onSuccess: () => (notifySuccess('Invitation text saved.'), refresh()),
+  })
   const reset = useMutation({ mutationFn: () => api(url, { method: 'DELETE' }), onSuccess: refresh })
   const changed = subject !== template.subject || body !== template.body
 

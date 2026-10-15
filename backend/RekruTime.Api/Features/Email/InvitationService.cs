@@ -26,7 +26,7 @@ public class InvitationService(AppDbContext db, IOptions<ClubOptions> club, IOpt
         {
             var mail = Invitations.Render(await TemplateAsync(link.Language), new InvitationValues(
                 link.Recruit!.FullName, club.Value.BookingUrl(link.Token), link.Sections.Select(s => s.Name).Order(),
-                period?.InterviewsTo, club.Value.ContactEmail), link.Language, email.Value.FromName);
+                period?.InterviewsTo, club.Value.ContactEmail), link.Language, club.Value.Name);
             db.EmailMessages.Add(new EmailMessage
             {
                 To = link.Recruit.Email, ToName = link.Recruit.FullName, Subject = mail.Subject, Body = mail.Body, HtmlBody = mail.Html, BookingLinkId = link.Id,
@@ -67,7 +67,7 @@ public class InvitationService(AppDbContext db, IOptions<ClubOptions> club, IOpt
         var sections = await db.Sections.OrderBy(s => s.Name).Select(s => s.Name).Take(2).ToListAsync();
         return Invitations.Render(new Template(req.Subject, req.Body), new InvitationValues(
             "Jan Kowalski", club.Value.BookingUrl("AbCdEfGhIjKlMnOpQrStUv"), sections.Count > 0 ? sections : ["AI"],
-            period?.InterviewsTo, club.Value.ContactEmail), language, email.Value.FromName);
+            period?.InterviewsTo, club.Value.ContactEmail), language, club.Value.Name);
     }
 
     async Task<Template> TemplateAsync(string language)

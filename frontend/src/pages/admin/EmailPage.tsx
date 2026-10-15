@@ -1,14 +1,16 @@
-import { Alert, Badge, Button, Code, Group, Loader, Paper, SegmentedControl, Stack, Table, Text, Title, Tooltip } from '@mantine/core'
+import { Alert, Badge, Button, Code, Group, Paper, SegmentedControl, Skeleton, Stack, Table, Text, Title, Tooltip } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, errorMessage } from '../../api'
+import { PageHeader } from '../../components/Page'
+import { notifySuccess } from '../../notify'
 import { TemplateEditor } from './TemplateEditor'
 
 type Settings = { configured: boolean; host: string | null; port: number; fromAddress: string | null; fromName: string; replyTo: string | null }
 type Status = 'Pending' | 'Sent' | 'Failed'
 type Message = { id: number; to: string; subject: string; status: Status; attempts: number; lastError: string | null; createdAt: string; sentAt: string | null }
 
-const statusColor: Record<Status, string> = { Pending: 'blue', Sent: 'green', Failed: 'red' }
+const statusColor: Record<Status, string> = { Pending: 'cortex', Sent: 'signal', Failed: 'red' }
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 export function EmailPage() {
@@ -20,7 +22,10 @@ export function EmailPage() {
     queryFn: () => api<Message[]>(`/api/email/messages${status === 'all' ? '' : `?status=${status}`}`),
     refetchInterval: 5000, // the sender works in the background – watch statuses change
   })
-  const test = useMutation({ mutationFn: () => api<{ sentTo: string }>('/api/email/test', { method: 'POST' }) })
+  const test = useMutation({
+    mutationFn: () => api<{ sentTo: string }>('/api/email/test', { method: 'POST' }),
+    onSuccess: (r) => notifySuccess(`Sent to ${r.sentTo} – check the inbox (and spam).`, 'Test e-mail sent'),
+  })
   const retry = useMutation({
     mutationFn: (id: number) => api(`/api/email/messages/${id}/retry`, { method: 'POST' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['email-messages'] }),
@@ -28,10 +33,10 @@ export function EmailPage() {
 
   return (
     <Stack>
-      <Title order={2}>E-mail</Title>
+      <PageHeader title="E-mail" description="Invitations go out through the SMTP server set on the server. Edit the texts below; recent e-mails and their status are at the bottom." />
 
       <Paper withBorder p="md">
-        {settings.isPending && <Loader />}
+        {settings.isPending && <Skeleton height={60} />}
         {settings.data && (
           <Stack gap="xs">
             {settings.data.configured ? (
@@ -48,7 +53,6 @@ export function EmailPage() {
               <Button variant="default" loading={test.isPending} disabled={!settings.data.configured} onClick={() => test.mutate()}>
                 Send test e-mail to me
               </Button>
-              {test.isSuccess && <Text c="green" size="sm">Sent to {test.data.sentTo} – check the inbox (and spam).</Text>}
             </Group>
             {test.isError && <Alert color="red">{errorMessage(test.error)}</Alert>}
           </Stack>

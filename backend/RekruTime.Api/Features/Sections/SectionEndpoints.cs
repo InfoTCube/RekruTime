@@ -1,5 +1,6 @@
 using RekruTime.Api.Common;
 using RekruTime.Api.Data;
+using RekruTime.Api.Features.Booking;
 
 namespace RekruTime.Api.Features.Sections;
 
@@ -10,6 +11,8 @@ public static class SectionEndpoints
         var sections = app.MapGroup("/api/sections").WithTags("Sections").RequireAuthorization();
 
         sections.MapGet("/", (SectionService s) => s.ListAsync());
+
+        sections.MapGet("/capacity", (SlotService s) => s.CapacityAsync()).RequireAuthorization(Roles.Admin);
 
         sections.MapPost("/", async (SectionRequest req, SectionService s) =>
             (await s.CreateAsync(req)).ToHttp(dto => Results.Created($"/api/sections/{dto.Id}", dto))).RequireAuthorization(Roles.Admin);

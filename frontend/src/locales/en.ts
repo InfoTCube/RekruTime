@@ -4,7 +4,12 @@ export const en: Dictionary = {
   name: 'English',
   locale: 'en-GB',
 
+  recruitment: 'Recruitment',
   title: 'Book your recruitment interview',
+  stepDay: 'Choose a day',
+  stepTime: 'Choose a time',
+  stepDetails: 'Your details',
+  bookedNote: "We've saved your time. See you there!",
   linkInvalid: 'This link is not valid',
   linkExpired: 'This link has expired',
   linkProblemHelp: 'Please contact the person who sent it to you.',

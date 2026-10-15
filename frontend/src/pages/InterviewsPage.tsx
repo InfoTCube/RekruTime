@@ -1,7 +1,7 @@
 import enGb from '@fullcalendar/core/locales/en-gb'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import { Alert, Anchor, Badge, Button, Group, Loader, Modal, MultiSelect, Paper, SegmentedControl, Select, Stack, Text, TextInput, Title } from '@mantine/core'
+import { Alert, Anchor, Badge, Button, Group, Modal, MultiSelect, Paper, SegmentedControl, Select, Stack, Text, TextInput } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -10,6 +10,8 @@ import { isAdmin, useMe } from '../auth'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { interviewsKey, statusColor, useInterviews, type Interview, type InterviewStatus } from '../interviews'
 import { useSections } from '../sections'
+import { EmptyState, PageHeader, TableSkeleton } from '../components/Page'
+import { IconCalendarEvent } from '@tabler/icons-react'
 import '../calendar.css'
 
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -39,27 +41,30 @@ export function InterviewsPage() {
 
   return (
     <Stack>
-      <Group justify="space-between">
-        <Title order={2}>{admin ? 'Interviews' : 'My interviews'}</Title>
-        <Group>
-          {admin && (
-            <Select placeholder="All sections" clearable value={sectionId} onChange={setSectionId} data={(sections.data ?? []).map((s) => ({ value: String(s.id), label: s.name }))} />
-          )}
-          <SegmentedControl
-            value={view}
-            onChange={(v) => setView(v as typeof view)}
-            data={[
-              { value: 'upcoming', label: 'Upcoming' },
-              { value: 'all', label: 'All' },
-              { value: 'calendar', label: 'Calendar' },
-            ]}
-          />
-        </Group>
-      </Group>
+      <PageHeader title={admin ? 'Interviews' : 'My interviews'}>
+        {admin && (
+          <Select placeholder="All sections" clearable value={sectionId} onChange={setSectionId} data={(sections.data ?? []).map((s) => ({ value: String(s.id), label: s.name }))} />
+        )}
+        <SegmentedControl
+          value={view}
+          onChange={(v) => setView(v as typeof view)}
+          data={[
+            { value: 'upcoming', label: 'Upcoming' },
+            { value: 'all', label: 'All' },
+            { value: 'calendar', label: 'Calendar' },
+          ]}
+        />
+      </PageHeader>
 
-      {interviews.isPending && <Loader />}
+      {interviews.isPending && <TableSkeleton />}
       {interviews.isError && <Alert color="red">{errorMessage(interviews.error)}</Alert>}
-      {interviews.data?.length === 0 && view !== 'calendar' && <Text c="dimmed">No interviews.</Text>}
+      {interviews.data?.length === 0 && view !== 'calendar' && (
+        <EmptyState icon={<IconCalendarEvent size={24} />} title={view === 'upcoming' ? 'No upcoming interviews' : 'No interviews yet'}>
+          {admin
+            ? 'Interviews appear here as soon as recruits book a time through their links.'
+            : "When a recruit books a time you're on the team for, it shows up here. Keep your availability up to date."}
+        </EmptyState>
+      )}
 
       {view === 'calendar' ? (
         <FullCalendar

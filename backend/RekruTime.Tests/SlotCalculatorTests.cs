@@ -177,4 +177,13 @@ public class SlotCalculatorTests
         Assert.Equal(7, slots.Count); // 00:00 … 01:30 every 15 min, no gap or duplicate at the switch
         Assert.All(slots.Zip(slots.Skip(1)), p => Assert.Equal(SlotCalculator.Step, p.Second.Start - p.First.Start));
     }
+
+    [Fact]
+    public void Capacity_counts_non_overlapping_interviews()
+    {
+        Interviewer[] people = [Person("a", [Ai], free: Free(10, 11)), Person("b", [Ai], free: Free(10, 11))];
+
+        Assert.Equal(2, SlotCalculator.Capacity(Slots([Ai], people), TimeSpan.FromMinutes(30)));           // 10:00, 10:30
+        Assert.Equal(1, SlotCalculator.Capacity(Slots([Ai], people, buffer: 15), TimeSpan.FromMinutes(45))); // 10:00 (+ buffer) only
+    }
 }

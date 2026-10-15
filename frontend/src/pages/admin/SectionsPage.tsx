@@ -1,8 +1,11 @@
-import { ActionIcon, Alert, Button, Group, Loader, Modal, NumberInput, Stack, Table, Text, TextInput, Title } from '@mantine/core'
+import { ActionIcon, Alert, Button, Group, Modal, NumberInput, Stack, Table, TextInput } from '@mantine/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, errorMessage, fieldError } from '../../api'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { EmptyState, PageHeader, TableSkeleton } from '../../components/Page'
+import { notifySuccess } from '../../notify'
+import { IconHierarchy2, IconPlus, IconTrash } from '@tabler/icons-react'
 import { sectionsKey, useSections, type Section } from '../../sections'
 
 type SectionForm = Omit<Section, 'id'>
@@ -20,6 +23,7 @@ export function SectionsPage() {
         ? api('/api/sections', { method: 'POST', json: form })
         : api(`/api/sections/${(editing as Section).id}`, { method: 'PUT', json: form }),
     onSuccess: () => {
+      notifySuccess(editing === 'new' ? 'Section added.' : 'Section saved.')
       queryClient.invalidateQueries({ queryKey: sectionsKey })
       setEditing(null)
     },
@@ -28,6 +32,7 @@ export function SectionsPage() {
   const remove = useMutation({
     mutationFn: (s: Section) => api(`/api/sections/${s.id}`, { method: 'DELETE' }),
     onSuccess: () => {
+      notifySuccess('Section deleted.')
       queryClient.invalidateQueries({ queryKey: sectionsKey })
       setDeleting(null)
     },
@@ -35,14 +40,19 @@ export function SectionsPage() {
 
   return (
     <Stack>
-      <Group justify="space-between">
-        <Title order={2}>Sections</Title>
-        <Button onClick={() => (save.reset(), setEditing('new'))}>Add section</Button>
-      </Group>
+      <PageHeader title="Sections" description="Recruits apply to sections; recruiters interview for the sections they belong to. Duration and buffer set how long each interview blocks the room.">
+        <Button leftSection={<IconPlus size={16} />} onClick={() => (save.reset(), setEditing('new'))}>
+          Add section
+        </Button>
+      </PageHeader>
 
-      {sections.isPending && <Loader />}
+      {sections.isPending && <TableSkeleton rows={3} />}
       {sections.isError && <Alert color="red">{errorMessage(sections.error)}</Alert>}
-      {sections.data?.length === 0 && <Text c="dimmed">No sections yet.</Text>}
+      {sections.data?.length === 0 && (
+        <EmptyState icon={<IconHierarchy2 size={24} />} title="No sections yet">
+          Add the club's sections first – booking links and recruiters are assigned to them.
+        </EmptyState>
+      )}
       {!!sections.data?.length && (
         <Table.ScrollContainer minWidth={420}>
           <Table striped>
@@ -66,7 +76,7 @@ export function SectionsPage() {
                         Edit
                       </Button>
                       <ActionIcon variant="subtle" color="red" aria-label={`Delete ${s.name}`} onClick={() => (remove.reset(), setDeleting(s))}>
-                        ✕
+                        <IconTrash size={16} />
                       </ActionIcon>
                     </Group>
                   </Table.Td>
