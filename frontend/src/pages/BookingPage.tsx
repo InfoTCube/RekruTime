@@ -168,7 +168,7 @@ function Booking({ info, base }: { info: LinkInfo; base: string }) {
 
 function BookingForm({ info, base, slot, onConflict }: { info: LinkInfo; base: string; slot: Slot; onConflict: () => void }) {
   const queryClient = useQueryClient()
-  const [form, setForm] = useState({ fullName: info.name ?? '', email: info.email ?? '', phone: '', gdprConsent: false })
+  const [form, setForm] = useState({ fullName: info.name ?? '', email: info.email ?? '', discordNickname: '', phone: '', gdprConsent: false })
   const [conflict, setConflict] = useState<string | null>(null)
 
   const book = useMutation({
@@ -200,6 +200,15 @@ function BookingForm({ info, base, slot, onConflict }: { info: LinkInfo; base: s
           )}
           <TextInput label="Full name" required autoComplete="name" value={form.fullName} error={fieldError(book.error, 'FullName')} onChange={(e) => setForm({ ...form, fullName: e.currentTarget.value })} />
           <TextInput label="E-mail" type="email" required autoComplete="email" value={form.email} error={fieldError(book.error, 'Email')} onChange={(e) => setForm({ ...form, email: e.currentTarget.value })} />
+          <TextInput
+            label="Discord nickname"
+            description="Optional, but recommended – we talk to members on Discord."
+            placeholder="e.g. jan_kowalski"
+            autoComplete="off"
+            value={form.discordNickname}
+            error={fieldError(book.error, 'DiscordNickname')}
+            onChange={(e) => setForm({ ...form, discordNickname: e.currentTarget.value })}
+          />
           <TextInput label="Phone (optional)" type="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.currentTarget.value })} />
           <Checkbox
             required

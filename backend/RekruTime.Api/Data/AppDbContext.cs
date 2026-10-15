@@ -49,6 +49,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<RecruitmentSettings>().ToTable(t => t.HasCheckConstraint("CK_RecruitmentSettings_Single", "\"Id\" = 1"));
 
         b.Entity<Recruit>().HasIndex(r => r.Email).IsUnique();
+        b.Entity<Recruit>().Property(r => r.DiscordNickname).HasMaxLength(50);
 
         b.Entity<Application>().HasIndex(a => new { a.RecruitId, a.SectionId }).IsUnique();
         b.Entity<Application>().HasOne<Recruit>().WithMany(r => r.Applications).HasForeignKey(a => a.RecruitId);

@@ -16,6 +16,7 @@ public record BookRequest(
     [Required, StringLength(200, MinimumLength = 2)] string FullName,
     [Required, EmailAddress, StringLength(256)] string Email,
     [StringLength(30)] string? Phone,
+    [StringLength(50)] string? DiscordNickname, // optional but recommended – how the club talks to members
     bool GdprConsent);
 
 // No auth: the unguessable token is the key. Rate limited per IP.
@@ -121,7 +122,7 @@ public static class PublicBookingEndpoints
 
     static IResult AlreadyBooked() => Results.Problem("An interview has already been booked with this link.", statusCode: 409);
 
-    // The link's recruit (created by the admin) or the one with this e-mail, else a new one. Name/phone as entered now.
+    // The link's recruit (created by the admin) or the one with this e-mail, else a new one. Name/phone/Discord as entered now.
     static async Task<Recruit> RecruitFor(AppDbContext db, BookingLink link, BookRequest req)
     {
         var email = req.Email.Trim().ToLowerInvariant();
@@ -132,6 +133,7 @@ public static class PublicBookingEndpoints
         if (recruit.Email != email && !await db.Recruits.AnyAsync(r => r.Email == email)) recruit.Email = email;
         recruit.FullName = req.FullName.Trim();
         recruit.Phone = string.IsNullOrWhiteSpace(req.Phone) ? recruit.Phone : req.Phone.Trim();
+        recruit.DiscordNickname = string.IsNullOrWhiteSpace(req.DiscordNickname) ? recruit.DiscordNickname : req.DiscordNickname.Trim().TrimStart('@');
         return recruit;
     }
 
