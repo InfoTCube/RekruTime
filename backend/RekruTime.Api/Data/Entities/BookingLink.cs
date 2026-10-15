@@ -11,5 +11,6 @@ public class BookingLink
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ExpiresAt { get; set; }
     public bool IsActive { get; set; } = true;
+    public string Language { get; set; } = "pl"; // invitation e-mail + booking page
     public List<Section> Sections { get; set; } = [];
 }

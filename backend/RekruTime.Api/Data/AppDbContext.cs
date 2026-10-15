@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<RecruitmentSettings> RecruitmentSettings => Set<RecruitmentSettings>();
     public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
+    public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder b)
     {
@@ -54,6 +55,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
         b.Entity<EmailMessage>().HasOne<BookingLink>().WithMany().HasForeignKey(m => m.BookingLinkId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<EmailMessage>().HasIndex(m => new { m.Status, m.NextAttemptAt });
+        b.Entity<EmailTemplate>().HasKey(t => new { t.Key, t.Language });
+        b.Entity<BookingLink>().Property(l => l.Language).HasMaxLength(5);
 
         b.Entity<Recruit>().HasIndex(r => r.Email).IsUnique();
         b.Entity<Recruit>().Property(r => r.DiscordNickname).HasMaxLength(50);

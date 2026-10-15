@@ -2,6 +2,7 @@ import { Alert, Badge, Button, Code, Group, Loader, Paper, SegmentedControl, Sta
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, errorMessage } from '../../api'
+import { TemplateEditor } from './TemplateEditor'
 
 type Settings = { configured: boolean; host: string | null; port: number; fromAddress: string | null; fromName: string; replyTo: string | null }
 type Status = 'Pending' | 'Sent' | 'Failed'
@@ -53,6 +54,8 @@ export function EmailPage() {
           </Stack>
         )}
       </Paper>
+
+      <TemplateEditor />
 
       <Group justify="space-between">
         <Title order={4}>Recent e-mails</Title>
