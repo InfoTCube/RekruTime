@@ -26,10 +26,10 @@ public class InvitationService(AppDbContext db, IOptions<ClubOptions> club, IOpt
         {
             var mail = Invitations.Render(await TemplateAsync(link.Language), new InvitationValues(
                 link.Recruit!.FullName, club.Value.BookingUrl(link.Token), link.Sections.Select(s => s.Name).Order(),
-                period?.InterviewsTo, club.Value.ContactEmail), link.Language);
+                period?.InterviewsTo, club.Value.ContactEmail), link.Language, email.Value.FromName);
             db.EmailMessages.Add(new EmailMessage
             {
-                To = link.Recruit.Email, ToName = link.Recruit.FullName, Subject = mail.Subject, Body = mail.Body, BookingLinkId = link.Id,
+                To = link.Recruit.Email, ToName = link.Recruit.FullName, Subject = mail.Subject, Body = mail.Body, HtmlBody = mail.Html, BookingLinkId = link.Id,
             });
             queued++;
         }
@@ -60,14 +60,14 @@ public class InvitationService(AppDbContext db, IOptions<ClubOptions> club, IOpt
         db.EmailTemplates.Where(t => t.Key == Invitations.Key && t.Language == language).ExecuteDeleteAsync();
 
     // Unsaved text filled with sample values – exactly what a recruit would get.
-    public async Task<Result<Template>> PreviewAsync(string language, TemplateRequest req)
+    public async Task<Result<RenderedEmail>> PreviewAsync(string language, TemplateRequest req)
     {
         if (!Invitations.Defaults.ContainsKey(language)) return Error.NotFound();
         var period = await db.RecruitmentSettings.FindAsync(1);
         var sections = await db.Sections.OrderBy(s => s.Name).Select(s => s.Name).Take(2).ToListAsync();
         return Invitations.Render(new Template(req.Subject, req.Body), new InvitationValues(
             "Jan Kowalski", club.Value.BookingUrl("AbCdEfGhIjKlMnOpQrStUv"), sections.Count > 0 ? sections : ["AI"],
-            period?.InterviewsTo, club.Value.ContactEmail), language);
+            period?.InterviewsTo, club.Value.ContactEmail), language, email.Value.FromName);
     }
 
     async Task<Template> TemplateAsync(string language)

@@ -39,4 +39,23 @@ public class InvitationTests
         Assert.Contains("https://r.example/book/tok", r.Body);
         Assert.DoesNotContain("{", r.Subject + r.Body); // nothing left unfilled
     }
+
+    [Fact]
+    public void Html_turns_the_link_line_into_a_button_and_escapes_the_text()
+    {
+        var t = new Template("x", "Cześć {firstName}! <script>\n\nWybierz termin:\n{link}\n\nPisz: {contact}.");
+
+        var html = Invitations.Render(t, Jan, "pl", "Koło & Co").Html;
+
+        Assert.Contains(">Wybierz termin</a>", html);                                   // button label
+        Assert.Contains("<a href=\"https://r.example/book/tok\"", html);              // button target
+        Assert.Contains("Cześć Jan! &lt;script&gt;", html);                             // admin text is never raw HTML
+        Assert.Contains("<a href=\"mailto:rekrutacja@kolo.pl\"", html);              // address linked…
+        Assert.Contains("rekrutacja@kolo.pl</a>.", html);                              // …without the trailing dot
+        Assert.Contains("Koło &amp; Co", html);                                          // header
+        Assert.Equal(3, html.Split("r.example/book/tok").Length - 1);                 // button + fallback link only, not also a paragraph
+    }
+
+    [Fact]
+    public void Every_language_has_html_texts() => Assert.Equal(Invitations.Defaults.Keys.Order(), Invitations.Html.Keys.Order());
 }

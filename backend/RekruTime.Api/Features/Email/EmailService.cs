@@ -25,7 +25,7 @@ public class EmailService(AppDbContext db, SmtpMailer mailer, IOptions<EmailOpti
         try
         {
             using var client = await mailer.ConnectAsync(ct);
-            await mailer.SendAsync(client, to, null, "RekruTime: test e-mail", "If you can read this, RekruTime can send e-mails.", ct);
+            await mailer.SendAsync(client, to, null, "RekruTime: test e-mail", "If you can read this, RekruTime can send e-mails.", null, ct);
             await client.DisconnectAsync(true, ct);
             return new TestSentDto(to);
         }

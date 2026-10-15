@@ -10,7 +10,8 @@ public class EmailMessage
     public required string To { get; set; }
     public string? ToName { get; set; }
     public required string Subject { get; set; }
-    public required string Body { get; set; } // plain text
+    public required string Body { get; set; } // plain text (always sent – alternative part for clients without HTML)
+    public string? HtmlBody { get; set; }
     public EmailStatus Status { get; set; } = EmailStatus.Pending;
     public int Attempts { get; set; }
     public string? LastError { get; set; }
