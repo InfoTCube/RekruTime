@@ -16,7 +16,14 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference(); // /scalar
 }
 
+// SPA from wwwroot (copied in by the Dockerfile; absent in dev, where Vite serves it)
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapGet("/api/health", async (AppDbContext db) =>
     await db.Database.CanConnectAsync() ? Results.Ok(new { status = "ok" }) : Results.StatusCode(503));
+
+app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
+app.MapFallbackToFile("index.html");                        // client-side routes
 
 app.Run();
