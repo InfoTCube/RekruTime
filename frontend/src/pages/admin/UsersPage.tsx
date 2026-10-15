@@ -165,13 +165,13 @@ export function UsersPage() {
       <Modal opened={password !== null} onClose={() => setPassword(null)} title="Temporary password" centered>
         <Stack>
           <Text size="sm">
-            Send this to <b>{password?.user}</b>. It is shown only once.
+            Send this to <b>{password?.user}</b>. It is shown only once – after logging in they have to set their own password.
           </Text>
           <Group justify="space-between" wrap="nowrap">
             <Code fz="lg">{password?.password}</Code>
             <CopyButton value={password?.password ?? ''}>
               {({ copied, copy }) => (
-                <Button size="xs" color={copied ? 'teal' : undefined} onClick={copy}>
+                <Button size="xs" color={copied ? 'signal' : undefined} onClick={copy}>
                   {copied ? 'Copied' : 'Copy'}
                 </Button>
               )}

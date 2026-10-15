@@ -1,4 +1,4 @@
-import { ActionIcon, AppShell, Avatar, Burger, Center, Group, Loader, Menu, NavLink, ScrollArea, Stack, Text, Tooltip, UnstyledButton, useComputedColorScheme, useMantineColorScheme } from '@mantine/core'
+import { ActionIcon, Anchor, AppShell, Avatar, Burger, Center, Group, Loader, Menu, Modal, NavLink, Paper, ScrollArea, Stack, Text, Title, Tooltip, UnstyledButton, useComputedColorScheme, useMantineColorScheme } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
   IconCalendarEvent,
@@ -6,6 +6,7 @@ import {
   IconClockHour4,
   IconFileImport,
   IconHierarchy2,
+  IconKey,
   IconLayoutDashboard,
   IconLink,
   IconLogout,
@@ -16,9 +17,11 @@ import {
   type Icon,
 } from '@tabler/icons-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Navigate, Outlet, NavLink as RouterLink, useLocation } from 'react-router'
 import { api } from './api'
 import { isAdmin, meKey, useMe } from './auth'
+import { ChangePasswordForm } from './components/ChangePasswordForm'
 import { Logo } from './components/Logo'
 
 type Item = { to: string; label: string; icon: Icon }
@@ -63,6 +66,7 @@ export function Layout() {
   const me = useMe()
   const location = useLocation()
   const [opened, { toggle, close }] = useDisclosure()
+  const [changingPassword, setChangingPassword] = useState(false)
   const { setColorScheme } = useMantineColorScheme()
   const dark = useComputedColorScheme('light') === 'dark'
   const queryClient = useQueryClient()
@@ -82,6 +86,26 @@ export function Layout() {
     )
   if (!me.data) return <Navigate to="/login" replace state={{ from: location.pathname }} />
   const admin = isAdmin(me.data)
+
+  // Temporary password from an admin → choose your own before anything else.
+  if (me.data.mustChangePassword)
+    return (
+      <Center mih="100vh" p="md">
+        <Paper withBorder shadow="sm" p="xl" w="100%" maw={420}>
+          <Stack>
+            <Logo size={28} />
+            <Title order={3}>Set your own password</Title>
+            <Text size="sm" c="dimmed">
+              You logged in with a temporary password from an admin. Choose your own to continue – the current password is the temporary one.
+            </Text>
+            <ChangePasswordForm submitLabel="Save and continue" />
+            <Anchor component="button" size="sm" c="dimmed" onClick={() => logout.mutate()}>
+              Log out
+            </Anchor>
+          </Stack>
+        </Paper>
+      </Center>
+    )
 
   return (
     <AppShell
@@ -117,6 +141,9 @@ export function Layout() {
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>{me.data.email}</Menu.Label>
+                <Menu.Item leftSection={<IconKey size={16} />} onClick={() => setChangingPassword(true)}>
+                  Change password
+                </Menu.Item>
                 <Menu.Item leftSection={<IconLogout size={16} />} onClick={() => logout.mutate()}>
                   Log out
                 </Menu.Item>
@@ -150,6 +177,9 @@ export function Layout() {
       <AppShell.Main>
         <Outlet />
       </AppShell.Main>
+      <Modal opened={changingPassword} onClose={() => setChangingPassword(false)} title="Change password" centered>
+        <ChangePasswordForm onDone={() => setChangingPassword(false)} />
+      </Modal>
     </AppShell>
   )
 }

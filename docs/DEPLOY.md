@@ -14,9 +14,9 @@ docker compose -f docker-compose.prod.yml up -d
 Only `docker-compose.prod.yml`, `.env` (and `Caddyfile` for the Caddy option) are needed – in Dockge/Portainer you can
 paste the compose file into a new stack and fill in its `.env` there.
 
-Log in with `SeedAdmin__Email` / `SeedAdmin__Password` – use a long, unique password: users can't change their own
-password in the app yet (#83). The seed admin is created only when no admin exists, so you can clear
-`SeedAdmin__Password` afterwards.
+Log in with `SeedAdmin__Email` / `SeedAdmin__Password`, then change it under *account menu → Change password*. The
+seed admin is created only when no admin exists, so you can clear `SeedAdmin__Password` afterwards. Users created
+by an admin get a temporary password and must set their own at first login.
 
 ## Exposing it
 
