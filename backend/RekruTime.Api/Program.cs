@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RekruTime.Api.Data;
+using RekruTime.Api.Features.Auth;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,7 +10,22 @@ builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 builder.Services.AddOpenApi();
 
+builder.Services.AddIdentity<AppUser, IdentityRole>(o => o.User.RequireUniqueEmail = true)
+    .AddEntityFrameworkStores<AppDbContext>();
+builder.Services.AddAuthorization();
+builder.Services.ConfigureApplicationCookie(o =>
+{
+    o.Cookie.Name = "rekrutime.auth";
+    o.Cookie.SameSite = SameSiteMode.Strict; // SPA is same-origin; blocks cross-site requests carrying the cookie (CSRF)
+    o.ExpireTimeSpan = TimeSpan.FromDays(14);
+    // API: answer 401/403 instead of redirecting to a login page
+    o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = 401; return Task.CompletedTask; };
+    o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = 403; return Task.CompletedTask; };
+});
+
 var app = builder.Build();
+
+await Seed.RunAsync(app.Services, app.Configuration);
 
 if (app.Environment.IsDevelopment())
 {
@@ -20,8 +37,12 @@ if (app.Environment.IsDevelopment())
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapGet("/api/health", async (AppDbContext db) =>
     await db.Database.CanConnectAsync() ? Results.Ok(new { status = "ok" }) : Results.StatusCode(503));
+app.MapAuthEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
 app.MapFallbackToFile("index.html");                        // client-side routes
