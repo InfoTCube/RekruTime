@@ -43,6 +43,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<BookingLink>().HasIndex(l => l.Token).IsUnique();
         b.Entity<BookingLink>().Property(l => l.Token).HasMaxLength(32);
         b.Entity<BookingLink>().HasOne<AppUser>().WithMany().HasForeignKey(l => l.CreatedById).OnDelete(DeleteBehavior.SetNull);
+        // Deleting a recruit (GDPR) also deletes their links – the label holds their name.
+        b.Entity<BookingLink>().HasOne(l => l.Recruit).WithMany().HasForeignKey(l => l.RecruitId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<BookingLink>().HasMany(l => l.Sections).WithMany().UsingEntity("BookingLinkSections");
 
         b.Entity<RecruitmentSettings>().Property(s => s.Id).ValueGeneratedNever();

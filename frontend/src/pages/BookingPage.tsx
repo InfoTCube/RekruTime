@@ -1,4 +1,4 @@
-import { Alert, Anchor, Badge, Button, Checkbox, Chip, Container, Group, Loader, Paper, SimpleGrid, Stack, Switch, Text, TextInput, Title } from '@mantine/core'
+import { Alert, Anchor, Badge, Button, Checkbox, Chip, Collapse, Container, Group, Loader, Paper, SimpleGrid, Stack, Switch, Text, TextInput, Title } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useParams } from 'react-router'
@@ -170,6 +170,7 @@ function BookingForm({ info, base, slot, onConflict }: { info: LinkInfo; base: s
   const queryClient = useQueryClient()
   const [form, setForm] = useState({ fullName: info.name ?? '', email: info.email ?? '', discordNickname: '', phone: '', gdprConsent: false })
   const [conflict, setConflict] = useState<string | null>(null)
+  const [privacyOpen, setPrivacyOpen] = useState(false)
 
   const book = useMutation({
     mutationFn: () => api(`${base}/bookings`, { method: 'POST', json: { start: slot.start, ...form } }),
@@ -216,6 +217,16 @@ function BookingForm({ info, base, slot, onConflict }: { info: LinkInfo; base: s
             onChange={(e) => setForm({ ...form, gdprConsent: e.currentTarget.checked })}
             label="I agree to the processing of my personal data for the purpose of this recruitment."
           />
+          <Anchor component="button" type="button" size="sm" onClick={() => setPrivacyOpen((o) => !o)}>
+            How we use your data
+          </Anchor>
+          <Collapse expanded={privacyOpen}>
+            <Text size="sm" c="dimmed">
+              We use your name, e-mail, phone and Discord nickname only to organise your interview and the recruitment decision. Only the
+              recruitment team can see them. We delete them after the recruitment ends. You can ask us to see, correct or delete your data at any
+              time{info.contactEmail ? ` by writing to ${info.contactEmail}` : ''}. Agreeing is voluntary, but we can't book an interview without it.
+            </Text>
+          </Collapse>
           <Button type="submit" loading={book.isPending}>
             Book this time
           </Button>

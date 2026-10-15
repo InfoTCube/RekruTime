@@ -154,6 +154,15 @@ function EditInterview({ interview: i, onDone }: { interview: Interview; onDone:
   const [start, setStart] = useState(toLocalInput(i.start))
   const [interviewerIds, setInterviewerIds] = useState(i.interviewers.map((p) => p.id))
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const deleteRecruit = useMutation({
+    mutationFn: () => api(`/api/recruits/${i.recruit.id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: interviewsKey })
+      queryClient.invalidateQueries({ queryKey: ['booking-links'] })
+      onDone()
+    },
+  })
 
   const update = useMutation({
     mutationFn: (body: { start?: string; interviewerIds?: string[]; status?: InterviewStatus }) =>
@@ -218,6 +227,26 @@ function EditInterview({ interview: i, onDone }: { interview: Interview; onDone:
           </Group>
         </Stack>
       </form>
+      <Group justify="flex-end">
+        <Button variant="subtle" color="red" size="xs" onClick={() => (deleteRecruit.reset(), setConfirmDelete(true))}>
+          Delete recruit's data
+        </Button>
+      </Group>
+      <ConfirmModal
+        opened={confirmDelete}
+        title="Delete recruit's data"
+        message={
+          <>
+            Permanently delete <b>{i.recruit.fullName}</b> ({i.recruit.email}) with all their interviews, applications and booking links? Use this when they
+            ask to be removed (GDPR). This can't be undone.
+          </>
+        }
+        confirmLabel="Delete permanently"
+        loading={deleteRecruit.isPending}
+        error={deleteRecruit.error}
+        onConfirm={() => deleteRecruit.mutate()}
+        onClose={() => setConfirmDelete(false)}
+      />
       <ConfirmModal
         opened={confirmCancel}
         title="Cancel interview"
