@@ -7,6 +7,8 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 import { ApiError } from './api'
 import { meKey } from './auth'
 import { Layout, RequireAdmin, Todo } from './Layout'
+import { SectionsPage } from './pages/admin/SectionsPage'
+import { UsersPage } from './pages/admin/UsersPage'
 import { LoginPage } from './pages/LoginPage'
 
 const queryClient: QueryClient = new QueryClient({
@@ -32,8 +34,8 @@ const router = createBrowserRouter([
         element: <RequireAdmin />,
         children: [
           { path: 'links', element: <Todo title="Booking links" /> },
-          { path: 'users', element: <Todo title="Users" /> },
-          { path: 'sections', element: <Todo title="Sections" /> },
+          { path: 'users', element: <UsersPage /> },
+          { path: 'sections', element: <SectionsPage /> },
         ],
       },
     ],
