@@ -42,7 +42,7 @@ public class UserService(AppDbContext db, UserManager<AppUser> users)
 
         await using var tx = await db.Database.BeginTransactionAsync();
         var email = req.Email.Trim();
-        var user = new AppUser { UserName = email, Email = email, EmailConfirmed = true, DisplayName = req.DisplayName.Trim() };
+        var user = new AppUser { UserName = email, Email = email, EmailConfirmed = true, DisplayName = req.DisplayName.Trim(), MustChangePassword = true };
         var password = TemporaryPassword();
         var result = await users.CreateAsync(user, password);
         if (!result.Succeeded) return IdentityError(result);
@@ -91,6 +91,7 @@ public class UserService(AppDbContext db, UserManager<AppUser> users)
         if (user is null) return Error.NotFound();
         var password = TemporaryPassword();
         var token = await users.GeneratePasswordResetTokenAsync(user);
+        user.MustChangePassword = true; // saved by ResetPasswordAsync
         var result = await users.ResetPasswordAsync(user, token, password); // also signs out other sessions (security stamp)
         return result.Succeeded ? new PasswordDto(password) : IdentityError(result);
     }

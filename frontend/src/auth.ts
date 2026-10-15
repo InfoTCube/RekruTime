@@ -7,6 +7,7 @@ export type Me = {
   displayName: string
   roles: string[]
   sections: { id: number; name: string }[]
+  mustChangePassword: boolean // logged in with a temporary password from an admin
 }
 
 export const meKey = ['me']

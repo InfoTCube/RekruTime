@@ -17,6 +17,9 @@ public static class AuthEndpoints
             return Results.NoContent();
         });
 
+        auth.MapPost("/change-password", async (ChangePasswordRequest req, ClaimsPrincipal me, AuthService s) =>
+            (await s.ChangePasswordAsync(me.Id(), req)).ToHttp()).RequireAuthorization();
+
         auth.MapGet("/me", async (ClaimsPrincipal me, AuthService s) => (await s.MeAsync(me.Id())).ToHttp()).RequireAuthorization();
     }
 }
