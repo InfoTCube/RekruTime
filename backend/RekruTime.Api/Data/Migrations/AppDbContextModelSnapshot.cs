@@ -427,6 +427,10 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DiscordNickname")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
