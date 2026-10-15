@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using RekruTime.Api.Data;
 using RekruTime.Api.Features.Auth;
 
@@ -61,11 +60,11 @@ public static class InterviewEndpoints
             {
                 await db.SaveChangesAsync();
             }
-            catch (DbUpdateException e) when (e.InnerException is PostgresException { SqlState: PostgresErrorCodes.ExclusionViolation })
+            catch (Exception e) when (DbErrors.IsRoomTaken(e))
             {
                 return Results.Problem("The room is taken at that time by another interview.", statusCode: 409);
             }
-            catch (DbUpdateException e) when (e.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+            catch (Exception e) when (DbErrors.IsUniqueViolation(e))
             {
                 return Results.Problem("This recruit's link already has another active interview.", statusCode: 409);
             }

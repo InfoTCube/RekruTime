@@ -81,3 +81,5 @@ app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API route
 app.MapFallbackToFile("index.html");                        // client-side routes
 
 app.Run();
+
+public partial class Program; // for WebApplicationFactory in tests
