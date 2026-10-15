@@ -8,7 +8,7 @@ namespace RekruTime.Api.Features.Booking;
 
 public record BookingDto(DateTime Start, DateTime End);
 public record PublicLinkDto(
-    List<string> Sections, int DurationMinutes, string? ContactEmail, string? Location,
+    string? ClubName, List<string> Sections, int DurationMinutes, string? ContactEmail, string? Location,
     DateOnly? InterviewsFrom, DateOnly? InterviewsTo, string? Name, string? Email, string Language, BookingDto? Booking);
 public record PublicSlotDto(DateTime Start, DateTime End, SlotColor Color); // no interviewer names for recruits
 
@@ -29,6 +29,7 @@ public class PublicBookingService(AppDbContext db, SlotService slots, IOptions<C
         if (Unavailable(link) is { } gone) return gone;
         var period = await db.RecruitmentSettings.FindAsync(1);
         return new PublicLinkDto(
+            NullIfEmpty(club.Value.Name),
             link!.Sections.Select(s => s.Name).Order().ToList(),
             link.Sections.Max(s => s.InterviewDurationMinutes),
             NullIfEmpty(club.Value.ContactEmail), NullIfEmpty(club.Value.InterviewLocation),

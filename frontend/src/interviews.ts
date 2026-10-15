@@ -25,4 +25,4 @@ export const useInterviews = (params: Record<string, string | undefined>, enable
   })
 }
 
-export const statusColor: Record<InterviewStatus, string> = { Scheduled: 'blue', Cancelled: 'red', Done: 'gray' }
+export const statusColor: Record<InterviewStatus, string> = { Scheduled: 'cortex', Cancelled: 'red', Done: 'gray' }

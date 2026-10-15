@@ -1,10 +1,11 @@
-import {
-  Alert, Badge, Button, Checkbox, CopyButton, Group, Loader, Modal, MultiSelect, NumberInput, SegmentedControl, Select, Stack, Table, Text, Textarea, TextInput, Title, Tooltip,
-} from '@mantine/core'
+import { Alert, Badge, Button, Checkbox, CopyButton, Group, Modal, MultiSelect, NumberInput, SegmentedControl, Select, Stack, Table, Text, Textarea, TextInput, Tooltip } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, errorMessage, fieldError } from '../../api'
 import { ConfirmModal } from '../../components/ConfirmModal'
+import { EmptyState, PageHeader, TableSkeleton } from '../../components/Page'
+import { notifySuccess } from '../../notify'
+import { IconLink, IconPlus } from '@tabler/icons-react'
 import { useSections } from '../../sections'
 import { LinkCoverage } from './LinkCoverage'
 
@@ -26,7 +27,7 @@ type Link = {
 }
 
 const linksKey = ['booking-links']
-const statusColor: Record<Status, string> = { Unused: 'blue', Booked: 'green', Expired: 'gray', Inactive: 'red' }
+const statusColor: Record<Status, string> = { Unused: 'cortex', Booked: 'signal', Expired: 'gray', Inactive: 'red' }
 const fullUrl = (l: Link) => window.location.origin + l.url
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const who = (l: Link) => l.label ?? l.recruitEmail ?? 'Anonymous'
@@ -34,8 +35,8 @@ const who = (l: Link) => l.label ?? l.recruitEmail ?? 'Anonymous'
 const canInvite = (l: Link) => !!l.recruitEmail && l.status === 'Unused'
 const invitationBadge: Record<InvitationState, [string, string]> = {
   NotSent: ['gray', 'Not sent'],
-  Queued: ['blue', 'Sending…'],
-  Sent: ['green', 'Sent'],
+  Queued: ['cortex', 'Sending…'],
+  Sent: ['signal', 'Sent'],
   Failed: ['red', 'Failed'],
 }
 
@@ -85,7 +86,10 @@ export function LinksPage() {
   const [toInvite, setToInvite] = useState<number[] | null>(null)
   const invite = useMutation({
     mutationFn: (ids: number[]) => api<{ queued: number; skipped: number }>('/api/booking-links/invite', { method: 'POST', json: { linkIds: ids } }),
-    onSuccess: () => {
+    onSuccess: (r) => {
+      notifySuccess(
+        `${r.queued} invitation${r.queued === 1 ? '' : 's'} queued${r.skipped > 0 ? ` · ${r.skipped} skipped (booked, inactive, expired or without e-mail)` : ''}.`,
+      )
       queryClient.invalidateQueries({ queryKey: linksKey })
       setSelected([])
       setToInvite(null)
@@ -103,13 +107,11 @@ export function LinksPage() {
 
   return (
     <Stack>
-      <Group justify="space-between">
-        <Title order={2}>Booking links</Title>
-        <Button onClick={() => setCreating(true)}>Create links</Button>
-      </Group>
-      <Text c="dimmed" size="sm">
-        Each link is for one recruit and can book one interview. Send links by e-mail or message.
-      </Text>
+      <PageHeader title="Booking links" description="Each link is for one recruit and can book one interview. Send links by e-mail or message.">
+        <Button leftSection={<IconPlus size={16} />} onClick={() => setCreating(true)}>
+          Create links
+        </Button>
+      </PageHeader>
 
       <Group align="flex-end">
         <Select label="Section" placeholder="All" clearable value={sectionId} onChange={setSectionId} data={(sections.data ?? []).map((s) => ({ value: String(s.id), label: s.name }))} />
@@ -148,16 +150,17 @@ export function LinksPage() {
         )}
       </Group>
 
-      {links.isPending && <Loader />}
+      {links.isPending && <TableSkeleton />}
       {links.isError && <Alert color="red">{errorMessage(links.error)}</Alert>}
       {setActive.isError && <Alert color="red">{errorMessage(setActive.error)}</Alert>}
-      {invite.data && (
-        <Alert color="green" withCloseButton onClose={() => invite.reset()}>
-          {invite.data.queued} invitation{invite.data.queued === 1 ? '' : 's'} queued
-          {invite.data.skipped > 0 && ` · ${invite.data.skipped} skipped (booked, inactive, expired or without e-mail)`}.
-        </Alert>
-      )}
-      {links.data?.length === 0 && <Text c="dimmed">No links.</Text>}
+      {links.data?.length === 0 &&
+        (sectionId || status || invitation ? (
+          <Text c="dimmed">No links match these filters.</Text>
+        ) : (
+          <EmptyState icon={<IconLink size={24} />} title="No booking links yet">
+            Import your recruits from a form export, or create links by hand with “Create links”.
+          </EmptyState>
+        ))}
       {!!links.data?.length && (
         <Table.ScrollContainer minWidth={900}>
           <Table striped>
@@ -267,7 +270,7 @@ export function LinksPage() {
                         <Button
                           size="xs"
                           variant="subtle"
-                          color={l.status === 'Inactive' ? 'green' : 'red'}
+                          color={l.status === 'Inactive' ? 'signal' : 'red'}
                           loading={setActive.isPending && setActive.variables?.id === l.id}
                           onClick={() => setActive.mutate(l)}
                         >
@@ -292,7 +295,6 @@ export function LinksPage() {
             : `Send the invitation e-mail to ${toInvite?.length} recruits?`
         }
         confirmLabel="Send"
-        color="blue"
         loading={invite.isPending}
         error={invite.error}
         onConfirm={() => toInvite && invite.mutate(toInvite)}

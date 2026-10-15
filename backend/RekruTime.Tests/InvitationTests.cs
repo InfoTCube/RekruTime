@@ -52,7 +52,7 @@ public class InvitationTests
         Assert.Contains("Cześć Jan! &lt;script&gt;", html);                             // admin text is never raw HTML
         Assert.Contains("<a href=\"mailto:rekrutacja@kolo.pl\"", html);              // address linked…
         Assert.Contains("rekrutacja@kolo.pl</a>.", html);                              // …without the trailing dot
-        Assert.Contains("Koło &amp; Co", html);                                          // header
+        Assert.Contains("Rekrutacja – Koło &amp; Co", html);                             // header
         Assert.Equal(3, html.Split("r.example/book/tok").Length - 1);                 // button + fallback link only, not also a paragraph
     }
 

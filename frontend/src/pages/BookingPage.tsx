@@ -1,11 +1,16 @@
-import { Alert, Anchor, Badge, Button, Checkbox, Chip, Collapse, Container, Group, Loader, Paper, SegmentedControl, SimpleGrid, Stack, Switch, Text, TextInput, Title } from '@mantine/core'
+import { Alert, Anchor, Badge, Box, Button, Checkbox, Collapse, Container, Group, Paper, ScrollArea, SegmentedControl, SimpleGrid, Skeleton, Stack, Switch, Text, TextInput, ThemeIcon, Title } from '@mantine/core'
+import { IconCheck, IconClock, IconMapPin } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useParams } from 'react-router'
 import { api, ApiError, fieldError } from '../api'
+import { LogoMark } from '../components/Logo'
+import { SignalTrace } from '../components/SignalTrace'
 import { defaultLanguage, dictionaries, type Dictionary } from '../locales'
+import { slotColor } from '../theme'
 
 type LinkInfo = {
+  clubName: string | null
   sections: string[]
   durationMinutes: number
   contactEmail: string | null
@@ -25,7 +30,9 @@ const dayKey = (iso: string) => new Date(iso).toLocaleDateString('en-CA') // YYY
 function useFormat() {
   const { locale } = useContext(T)
   return {
-    dayLabel: (iso: string) => new Date(iso).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' }),
+    weekday: (iso: string) => new Date(iso).toLocaleDateString(locale, { weekday: 'short' }),
+    dayOfMonth: (iso: string) => new Date(iso).getDate(),
+    month: (iso: string) => new Date(iso).toLocaleDateString(locale, { month: 'short' }),
     longDay: (iso: string) => new Date(iso).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }),
     time: (iso: string) => new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
   }
@@ -64,20 +71,41 @@ export function BookingPage() {
     }
   }
 
+  const club = info.data?.clubName
   return (
     <T.Provider value={t}>
-      <Container size="sm" py="xl" px="md">
-        <Stack>
-          <Group justify="space-between" align="flex-start" wrap="nowrap">
-            <Title order={2}>{t.title}</Title>
+      {/* Hero band: who's inviting, what for – and the one animated moment, the signal trace. */}
+      <Box bg="cortex.9" c="white">
+        <Container size="sm" px="md" pt="lg">
+          <Group justify="space-between" wrap="nowrap" mb={40}>
+            <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+              <LogoMark size={26} />
+              <Text fw={600} truncate c="cortex.0">
+                {club ? `${t.recruitment} – ${club}` : t.recruitment}
+              </Text>
+            </Group>
             <SegmentedControl
               size="xs"
               value={language}
               onChange={choose}
+              color="signal.8"
+              styles={{ root: { background: 'rgba(255,255,255,0.1)' }, label: { color: 'white' } }}
               data={Object.entries(dictionaries).map(([value, d]) => ({ value, label: value.toUpperCase(), title: d.name }))}
             />
           </Group>
-          {info.isPending && <Loader />}
+          <Title order={1} c="white" fz={{ base: 30, sm: 40 }} lh={1.1} maw={520}>
+            {t.title}
+          </Title>
+          {info.data && <Meta info={info.data} />}
+        </Container>
+        <Box pt="md">
+          <SignalTrace height={44} />
+        </Box>
+      </Box>
+
+      <Container size="sm" py="xl" px="md">
+        <Stack gap="xl">
+          {info.isPending && <Skeleton height={200} />}
           {info.isError && (
             <Alert color="red" title={info.error instanceof ApiError && info.error.status === 410 ? t.linkExpired : t.linkInvalid}>
               {t.linkProblemHelp}
@@ -99,20 +127,48 @@ function Contact({ info, children }: { info: LinkInfo; children: React.ReactNode
   )
 }
 
-function Header({ info }: { info: LinkInfo }) {
+// Sections, length and place – under the title, on the dark band.
+function Meta({ info }: { info: LinkInfo }) {
   const t = useContext(T)
   return (
-    <Group gap="xs">
-      {info.sections.map((s) => (
-        <Badge key={s} size="lg" variant="light">
-          {s}
-        </Badge>
-      ))}
-      <Text size="sm" c="dimmed">
-        {t.minutes(info.durationMinutes)}
-        {info.location && ` · ${info.location}`}
-      </Text>
+    <Group gap="md" mt="md">
+      <Group gap={6}>
+        {info.sections.map((s) => (
+          <Badge key={s} size="lg" variant="filled" color="signal.8" tt="none">
+            {s}
+          </Badge>
+        ))}
+      </Group>
+      <Group gap={4} c="cortex.1">
+        <IconClock size={16} aria-hidden />
+        <Text size="sm">{t.minutes(info.durationMinutes)}</Text>
+      </Group>
+      {info.location && (
+        <Group gap={4} c="cortex.1" wrap="nowrap">
+          <IconMapPin size={16} aria-hidden />
+          <Text size="sm">{info.location}</Text>
+        </Group>
+      )}
     </Group>
+  )
+}
+
+// Numbered because booking really is a sequence: day → time → details.
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <Stack gap="sm">
+      <Group gap="sm">
+        <ThemeIcon radius="xl" size={28} color="cortex" variant="light" aria-hidden>
+          <Text fw={700} size="sm">
+            {n}
+          </Text>
+        </ThemeIcon>
+        <Title order={3} fz="lg">
+          {title}
+        </Title>
+      </Group>
+      {children}
+    </Stack>
   )
 }
 
@@ -121,16 +177,27 @@ function Booked({ info }: { info: LinkInfo }) {
   const f = useFormat()
   const b = info.booking!
   return (
-    <Stack>
-      <Header info={info} />
-      <Alert color="green" title={t.booked}>
-        <Text fw={500}>
-          {f.longDay(b.start)}, {f.time(b.start)}–{f.time(b.end)}
-        </Text>
-        {info.location && <Text>{info.location}</Text>}
-      </Alert>
-      <Contact info={info}>{t.needChange}</Contact>
-    </Stack>
+    <Paper withBorder p="xl" shadow="sm">
+      <Stack align="center" ta="center" gap="sm">
+        <ThemeIcon size={56} radius="xl" color="signal.7" aria-hidden>
+          <IconCheck size={32} stroke={2.5} />
+        </ThemeIcon>
+        <Title order={2} fz={26}>
+          {t.booked}
+        </Title>
+        <Stack gap={0}>
+          <Text fz="lg" fw={500}>
+            {f.longDay(b.start)}
+          </Text>
+          <Text fz={28} fw={700} ff="heading" style={{ whiteSpace: 'nowrap' }}>
+            {f.time(b.start)}–{f.time(b.end)}
+          </Text>
+        </Stack>
+        {info.location && <Text c="dimmed">{info.location}</Text>}
+        <Text size="sm">{t.bookedNote}</Text>
+        <Contact info={info}>{t.needChange}</Contact>
+      </Stack>
+    </Paper>
   )
 }
 
@@ -150,75 +217,115 @@ function Booking({ info, base }: { info: LinkInfo; base: string }) {
   const days = [...new Set((slots.data ?? []).map((s) => dayKey(s.start)))]
   const selectedDay = day && days.includes(day) ? day : days[0]
   const daySlots = (slots.data ?? []).filter((s) => dayKey(s.start) === selectedDay)
+  const yellowSwitch = (
+    <Switch
+      color="spark.6"
+      label={t.noneSuit}
+      checked={showYellow}
+      onChange={(e) => {
+        setShowYellow(e.currentTarget.checked)
+        setPicked(null)
+      }}
+    />
+  )
 
   return (
-    <Stack>
-      <Header info={info} />
+    <Stack gap="xl">
       <Text>{t.pickTime}</Text>
 
-      {slots.isPending && <Loader />}
+      {slots.isPending && <Skeleton height={140} />}
       {slots.isError && <Alert color="red">{t.somethingWrong}</Alert>}
-      {slots.data?.length === 0 && <Alert color="gray">{showYellow ? t.noTimes : t.noGreenTimes}</Alert>}
-
-      {days.length > 0 && (
-        <Chip.Group
-          value={selectedDay}
-          onChange={(v) => {
-            setDay(v as string)
-            setPicked(null)
-          }}
-        >
-          <Group gap="xs">
-            {days.map((d) => (
-              <Chip key={d} value={d}>
-                {f.dayLabel(`${d}T12:00:00`)}
-              </Chip>
-            ))}
-          </Group>
-        </Chip.Group>
-      )}
-      {daySlots.length > 0 && (
-        <SimpleGrid cols={{ base: 3, xs: 4, sm: 6 }} spacing="xs">
-          {daySlots.map((s) => (
-            <Button
-              key={s.start}
-              variant={picked?.start === s.start ? 'filled' : 'light'}
-              color={s.color === 'Green' ? 'green' : 'yellow'}
-              onClick={() => setPicked(s)}
-            >
-              {f.time(s.start)}
-            </Button>
-          ))}
-        </SimpleGrid>
-      )}
-
-      <Switch
-        label={t.noneSuit}
-        checked={showYellow}
-        onChange={(e) => {
-          setShowYellow(e.currentTarget.checked)
-          setPicked(null)
-        }}
-      />
-      {showYellow && (
-        <Stack gap={4}>
-          <Text size="sm">{t.yellowExplained}</Text>
-          <Contact info={info}>{t.contactIfNone}</Contact>
+      {slots.data?.length === 0 && (
+        <Stack gap="sm">
+          <Alert color="cortex">{showYellow ? t.noTimes : t.noGreenTimes}</Alert>
+          {!showYellow && yellowSwitch}
         </Stack>
       )}
 
+      {days.length > 0 && (
+        <Step n={1} title={t.stepDay}>
+          <ScrollArea type="auto" offsetScrollbars>
+            <Group gap="xs" wrap="nowrap" pb={4} role="radiogroup" aria-label={t.stepDay}>
+              {days.map((d) => {
+                const iso = `${d}T12:00:00`
+                const active = d === selectedDay
+                return (
+                  <Button
+                    key={d}
+                    role="radio"
+                    aria-checked={active}
+                    aria-label={f.longDay(iso)}
+                    variant={active ? 'filled' : 'default'}
+                    h="auto"
+                    w={64}
+                    py={8}
+                    px={0}
+                    onClick={() => {
+                      setDay(d)
+                      setPicked(null)
+                    }}
+                  >
+                    <Stack gap={0} align="center">
+                      <Text fz="xs" fw={500} inherit>
+                        {f.weekday(iso)}
+                      </Text>
+                      <Text fz={22} fw={700} ff="heading" lh={1.2} inherit>
+                        {f.dayOfMonth(iso)}
+                      </Text>
+                      <Text fz="xs" inherit>
+                        {f.month(iso)}
+                      </Text>
+                    </Stack>
+                  </Button>
+                )
+              })}
+            </Group>
+          </ScrollArea>
+        </Step>
+      )}
+      {daySlots.length > 0 && (
+        <Step n={2} title={t.stepTime}>
+          <SimpleGrid cols={{ base: 3, xs: 4, sm: 6 }} spacing="xs">
+            {daySlots.map((s) => {
+              const active = picked?.start === s.start
+              return (
+                <Button
+                  key={s.start}
+                  aria-pressed={active}
+                  variant={active ? 'filled' : 'light'}
+                  color={active ? `${slotColor[s.color]}.8` : slotColor[s.color]}
+                  c={active ? undefined : `var(--slot-${s.color})`}
+                  onClick={() => setPicked(s)}
+                >
+                  {f.time(s.start)}
+                </Button>
+              )
+            })}
+          </SimpleGrid>
+          {yellowSwitch}
+          {showYellow && (
+            <Stack gap={4}>
+              <Text size="sm">{t.yellowExplained}</Text>
+              <Contact info={info}>{t.contactIfNone}</Contact>
+            </Stack>
+          )}
+        </Step>
+      )}
+
       {picked && (
-        <BookingForm
-          key={picked.start}
-          info={info}
-          base={base}
-          slot={picked}
-          onConflict={() => {
-            setPicked(null)
-            queryClient.invalidateQueries({ queryKey: ['public-slots', base] })
-            queryClient.invalidateQueries({ queryKey: ['public-link'] }) // if the link got booked (e.g. other tab) → "booked" view
-          }}
-        />
+        <Step n={3} title={t.stepDetails}>
+          <BookingForm
+            key={picked.start}
+            info={info}
+            base={base}
+            slot={picked}
+            onConflict={() => {
+              setPicked(null)
+              queryClient.invalidateQueries({ queryKey: ['public-slots', base] })
+              queryClient.invalidateQueries({ queryKey: ['public-link'] }) // if the link got booked (e.g. other tab) → "booked" view
+            }}
+          />
+        </Step>
       )}
     </Stack>
   )
@@ -247,7 +354,7 @@ function BookingForm({ info, base, slot, onConflict }: { info: LinkInfo; base: s
   const fieldProblem = ['FullName', 'Email', 'DiscordNickname', 'Phone'].some((k) => fieldError(book.error, k))
 
   return (
-    <Paper withBorder p="md">
+    <Paper withBorder p="lg" shadow="sm">
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -255,7 +362,7 @@ function BookingForm({ info, base, slot, onConflict }: { info: LinkInfo; base: s
         }}
       >
         <Stack>
-          <Text fw={500}>
+          <Text fw={600} ff="heading" fz="lg">
             {f.longDay(slot.start)}, {f.time(slot.start)}–{f.time(slot.end)}
           </Text>
           {conflict && <Alert color="orange">{t.taken}</Alert>}

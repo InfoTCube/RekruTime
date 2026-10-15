@@ -1,18 +1,17 @@
-import { Alert, Button, Group, Loader, Paper, Stack, Text, TextInput, Title } from '@mantine/core'
+import { Alert, Button, Group, Paper, Skeleton, Stack, Text, TextInput } from '@mantine/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, errorMessage } from '../../api'
+import { PageHeader } from '../../components/Page'
+import { notifySuccess } from '../../notify'
 import { formatDay, recruitmentKey, useRecruitmentPeriod, type RecruitmentPeriod } from '../../recruitment'
 
 export function RecruitmentPage() {
   const period = useRecruitmentPeriod()
   return (
     <Stack maw={520}>
-      <Title order={2}>Recruitment period</Title>
-      <Text c="dimmed" size="sm">
-        Interviews can only be booked for days in this period. Recruiters see only these weeks in their availability calendar.
-      </Text>
-      {period.isPending && <Loader />}
+      <PageHeader title="Recruitment period" description="Interviews can only be booked for days in this period. Recruiters see only these weeks in their availability calendar." />
+      {period.isPending && <Skeleton height={160} />}
       {period.isError && <Alert color="red">{errorMessage(period.error)}</Alert>}
       {period.data && <PeriodForm key={`${period.data.interviewsFrom}-${period.data.interviewsTo}`} initial={period.data} />}
       <PurgeRecruitData />
@@ -26,7 +25,10 @@ function PeriodForm({ initial }: { initial: RecruitmentPeriod }) {
   const [to, setTo] = useState(initial.interviewsTo ?? '')
   const save = useMutation({
     mutationFn: (p: RecruitmentPeriod) => api<RecruitmentPeriod>('/api/settings/recruitment', { method: 'PUT', json: p }),
-    onSuccess: (p) => queryClient.setQueryData(recruitmentKey, p),
+    onSuccess: (p) => {
+      queryClient.setQueryData(recruitmentKey, p)
+      notifySuccess(p.interviewsFrom ? 'Booking period saved.' : 'Booking closed.')
+    },
   })
   const isOpen = initial.interviewsFrom && initial.interviewsTo
 
@@ -40,11 +42,11 @@ function PeriodForm({ initial }: { initial: RecruitmentPeriod }) {
       >
         <Stack>
           {isOpen ? (
-            <Alert color="green">
+            <Alert color="signal">
               Booking open for {formatDay(initial.interviewsFrom!)} – {formatDay(initial.interviewsTo!)}.
             </Alert>
           ) : (
-            <Alert color="gray">No period set – booking is closed.</Alert>
+            <Alert color="cortex">No period set – booking is closed.</Alert>
           )}
           {save.isError && <Alert color="red">{errorMessage(save.error)}</Alert>}
           <Group grow align="flex-start">
@@ -75,7 +77,8 @@ function PurgeRecruitData() {
   const [confirm, setConfirm] = useState('')
   const purge = useMutation({
     mutationFn: () => api<{ deletedRecruits: number }>('/api/recruits/purge', { method: 'POST', json: { confirm } }),
-    onSuccess: () => {
+    onSuccess: (r) => {
+      notifySuccess(`Deleted ${r.deletedRecruits} recruits.`)
       setConfirm('')
       queryClient.invalidateQueries({ queryKey: ['interviews'] })
       queryClient.invalidateQueries({ queryKey: ['booking-links'] })
@@ -91,7 +94,6 @@ function PurgeRecruitData() {
           When the recruitment is over, permanently delete all recruits with their interviews, applications and booking links. Users, sections and
           availability stay. This can't be undone.
         </Text>
-        {purge.isSuccess && <Alert color="green">Deleted {purge.data.deletedRecruits} recruits.</Alert>}
         {purge.isError && <Alert color="red">{errorMessage(purge.error)}</Alert>}
         <TextInput label={`Type "${PURGE_WORDS}" to confirm`} value={confirm} onChange={(e) => setConfirm(e.currentTarget.value)} />
         <Group justify="flex-end">

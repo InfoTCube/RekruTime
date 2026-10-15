@@ -4,18 +4,18 @@ using System.Text.RegularExpressions;
 
 namespace RekruTime.Api.Features.Email;
 
-public record HtmlTexts(string Button, string LinkFallback, string Footer);
+public record HtmlTexts(string Recruitment, string Button, string LinkFallback, string Footer);
 
 // Wraps an editable plain-text e-mail in an HTML layout: blank line = paragraph, a line that is only the
 // booking link = big button, other URLs / e-mail addresses = links. Table layout + inline styles, because
 // Gmail and Outlook ignore <style> blocks and most modern CSS.
 public static partial class EmailHtml
 {
-    // ponytail: placeholder palette – the visual identity (#76) replaces these.
-    const string Accent = "#2563eb", Text = "#1f2937", Muted = "#6b7280", Page = "#f3f4f6";
+    // Brand colours – copies of frontend/src/theme.ts (cortex-9 header, signal-7 button/links: white text stays readable).
+    const string Header = "#26235c", Accent = "#0c8178", Text = "#22253a", Muted = "#6b7280", Page = "#f6f7fb";
     const string Font = "font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
 
-    public static string Build(string text, string link, HtmlTexts texts, string? header)
+    public static string Build(string text, string link, HtmlTexts texts, string header)
     {
         var content = new StringBuilder();
         var lines = new List<string>();
@@ -36,8 +36,8 @@ public static partial class EmailHtml
         Paragraph();
 
         var href = WebUtility.HtmlEncode(link);
-        var headerRow = string.IsNullOrWhiteSpace(header) ? "" :
-            $"<tr><td bgcolor=\"{Accent}\" style=\"background-color:{Accent};padding:20px 32px;{Font}font-size:18px;font-weight:bold;color:#ffffff\">{WebUtility.HtmlEncode(header)}</td></tr>";
+        var headerRow =
+            $"<tr><td bgcolor=\"{Header}\" style=\"background-color:{Header};padding:20px 32px;{Font}font-size:18px;font-weight:bold;color:#ffffff\">{WebUtility.HtmlEncode(header)}</td></tr>";
         return $"""
             <!DOCTYPE html>
             <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -46,6 +46,7 @@ public static partial class EmailHtml
             <!--[if mso]><table role="presentation" width="560" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:560px;background-color:#ffffff;border-radius:8px;overflow:hidden">
             {headerRow}
+            <tr><td height="4" bgcolor="#26c6b8" style="height:4px;font-size:0;line-height:0;background-color:#26c6b8">&nbsp;</td></tr>
             <tr><td style="padding:32px">{content}</td></tr>
             <tr><td style="padding:16px 32px 24px;border-top:1px solid #e5e7eb;{Font}font-size:12px;line-height:18px;color:{Muted}">
             {WebUtility.HtmlEncode(texts.LinkFallback)}<br><a href="{href}" style="color:{Muted};word-break:break-all">{href}</a><br><br>{WebUtility.HtmlEncode(texts.Footer)}

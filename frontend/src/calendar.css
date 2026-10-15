@@ -3,14 +3,14 @@
   --fc-border-color: var(--mantine-color-default-border);
   --fc-page-bg-color: var(--mantine-color-body);
   --fc-neutral-bg-color: var(--mantine-color-default-hover);
-  --fc-today-bg-color: var(--mantine-color-blue-light);
-  --fc-now-indicator-color: var(--mantine-color-red-6);
+  --fc-today-bg-color: var(--mantine-color-cortex-light);
+  --fc-now-indicator-color: var(--mantine-color-signal-6);
   --fc-button-bg-color: var(--mantine-color-default);
   --fc-button-border-color: var(--mantine-color-default-border);
   --fc-button-text-color: var(--mantine-color-text);
   --fc-button-hover-bg-color: var(--mantine-color-default-hover);
   --fc-button-hover-border-color: var(--mantine-color-default-border);
-  --fc-button-active-bg-color: var(--mantine-color-blue-light);
+  --fc-button-active-bg-color: var(--mantine-color-cortex-light);
   --fc-button-active-border-color: var(--mantine-color-default-border);
   font-size: var(--mantine-font-size-sm);
 }

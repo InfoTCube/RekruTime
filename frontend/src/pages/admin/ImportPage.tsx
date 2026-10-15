@@ -1,11 +1,11 @@
-import {
-  Alert, Anchor, Badge, Button, Checkbox, FileInput, Group, Loader, MultiSelect, Paper, Select, SimpleGrid, Stack, Table, Text, Textarea, TextInput, Title,
-} from '@mantine/core'
+import { Alert, Anchor, Badge, Button, Checkbox, FileInput, Group, Loader, MultiSelect, Paper, Select, SimpleGrid, Stack, Table, Text, Textarea, TextInput } from '@mantine/core'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { api, errorMessage } from '../../api'
+import { PageHeader } from '../../components/Page'
 import { parseTable } from '../../csv'
+import { IconCheck } from '@tabler/icons-react'
 import { useSections } from '../../sections'
 
 type Status = 'New' | 'AlreadyInvited' | 'Error'
@@ -17,7 +17,7 @@ const languages = [
   { value: 'pl', label: 'Polski' },
   { value: 'en', label: 'English' },
 ]
-const statusBadge: Record<Status, [string, string]> = { New: ['green', 'New'], AlreadyInvited: ['gray', 'Already invited'], Error: ['red', 'Error'] }
+const statusBadge: Record<Status, [string, string]> = { New: ['signal', 'New'], AlreadyInvited: ['gray', 'Already invited'], Error: ['red', 'Error'] }
 
 // Checkbox answers in Google Forms land in one cell: "AI, Web".
 const splitAnswers = (cell: string) => cell.split(/[,;]/).map((a) => a.trim()).filter(Boolean)
@@ -83,8 +83,8 @@ export function ImportPage() {
   if (commit.data)
     return (
       <Stack maw={720}>
-        <Title order={2}>Import recruits</Title>
-        <Alert color="green" title="Done">
+        <PageHeader title="Import recruits" />
+        <Alert color="signal" title="Import finished" icon={<IconCheck size={18} />}>
           Created {commit.data.created} personal links
           {commit.data.emailsQueued > 0 ? ` and queued ${commit.data.emailsQueued} invitation e-mails – they go out over the next minutes.` : '. No e-mails were sent.'}
         </Alert>
@@ -106,10 +106,10 @@ export function ImportPage() {
 
   return (
     <Stack>
-      <Title order={2}>Import recruits</Title>
-      <Text c="dimmed" size="sm">
-        Everyone gets their own booking link for the sections they applied to, by e-mail. Importing the same list again skips people who already have a link.
-      </Text>
+      <PageHeader
+        title="Import recruits"
+        description="Everyone gets their own booking link for the sections they applied to, by e-mail. Importing the same list again skips people who already have a link."
+      />
 
       <Paper withBorder p="md">
         <Stack>
@@ -213,7 +213,7 @@ export function ImportPage() {
             {preview.data && (
               <>
                 <Group gap="xs">
-                  <Badge color="green">{count('New')} new</Badge>
+                  <Badge color="signal">{count('New')} new</Badge>
                   <Badge color="gray">{count('AlreadyInvited')} already invited</Badge>
                   <Badge color="red">{count('Error')} with errors</Badge>
                 </Group>

@@ -52,16 +52,16 @@ public static class Invitations
     // Fixed parts of the HTML version around the editable text (EmailHtml).
     public static readonly Dictionary<string, HtmlTexts> Html = new()
     {
-        ["pl"] = new("Wybierz termin", "Przycisk nie działa? Otwórz ten link:",
+        ["pl"] = new("Rekrutacja", "Wybierz termin", "Przycisk nie działa? Otwórz ten link:",
             "Dostajesz tę wiadomość, bo zgłosiłeś(-aś) się do rekrutacji. Link jest osobisty – nie przekazuj go dalej."),
-        ["en"] = new("Choose a time", "Button not working? Open this link:",
+        ["en"] = new("Recruitment", "Choose a time", "Button not working? Open this link:",
             "You're receiving this because you applied to our recruitment. The link is personal – please don't forward it."),
     };
 
     public static readonly string[] Placeholders = ["{firstName}", "{name}", "{link}", "{sections}", "{deadline}", "{contact}"];
 
-    // header = title bar of the HTML version (the sender name), null = none.
-    public static RenderedEmail Render(Template t, InvitationValues v, string language, string? header = null)
+    // clubName → title bar of the HTML version: "Rekrutacja – {clubName}" (just "Rekrutacja" without it).
+    public static RenderedEmail Render(Template t, InvitationValues v, string language, string? clubName = null)
     {
         var culture = CultureInfo.GetCultureInfo(language);
         var values = new Dictionary<string, string>
@@ -74,7 +74,9 @@ public static class Invitations
             ["{contact}"] = v.Contact ?? "",
         };
         var body = Fill(t.Body, values);
-        return new(Fill(t.Subject, values), body, EmailHtml.Build(body, v.Link, Html.GetValueOrDefault(language, Html["pl"]), header));
+        var html = Html.GetValueOrDefault(language, Html["pl"]);
+        var header = string.IsNullOrWhiteSpace(clubName) ? html.Recruitment : $"{html.Recruitment} – {clubName.Trim()}";
+        return new(Fill(t.Subject, values), body, EmailHtml.Build(body, v.Link, html, header));
     }
 
     // An empty value takes the space before it along ("Cześć {name}!" → "Cześć!" for anonymous links).

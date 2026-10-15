@@ -3,13 +3,14 @@ import type { DateSelectArg, EventClickArg } from '@fullcalendar/core'
 import interactionPlugin from '@fullcalendar/interaction'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import { Alert, Group, SegmentedControl, Stack, Text, Title } from '@mantine/core'
+import { Alert, SegmentedControl, Stack, Text } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { api, errorMessage } from '../api'
 import { useMe } from '../auth'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { PageHeader } from '../components/Page'
 import { useInterviews } from '../interviews'
 import { formatDay, periodRange, useRecruitmentPeriod } from '../recruitment'
 import '../calendar.css'
@@ -67,8 +68,15 @@ export function AvailabilityPage() {
 
   return (
     <Stack>
-      <Group justify="space-between">
-        <Title order={2}>My availability</Title>
+      <PageHeader
+        title="My availability"
+        description={
+          <>
+            {mode === 'add' ? 'Drag over the calendar to mark when you can interview.' : 'Drag over a period to remove it from your availability.'} Click a block to
+            remove it. {isPhone && 'On a phone, press and hold, then drag.'}
+          </>
+        }
+      >
         <SegmentedControl
           value={mode}
           onChange={(v) => setMode(v as typeof mode)}
@@ -77,18 +85,14 @@ export function AvailabilityPage() {
             { value: 'remove', label: 'Remove time' },
           ]}
         />
-      </Group>
-      <Text c="dimmed" size="sm">
-        {mode === 'add' ? 'Drag over the calendar to mark when you can interview.' : 'Drag over a period to remove it from your availability.'} Click a block to
-        remove it. {isPhone && 'On a phone, press and hold, then drag.'}
-      </Text>
+      </PageHeader>
       {period.data &&
         (validRange ? (
           <Text size="sm">
             Recruitment period: <b>{formatDay(period.data.interviewsFrom!)}</b> – <b>{formatDay(period.data.interviewsTo!)}</b>
           </Text>
         ) : (
-          <Alert color="gray">No recruitment period is set yet, so recruits can't book. You can still add your availability.</Alert>
+          <Alert color="cortex">No recruitment period is set yet, so recruits can't book. You can still add your availability.</Alert>
         ))}
       {(add.isError || blocks.isError) && <Alert color="red">{errorMessage(add.error ?? blocks.error)}</Alert>}
 
@@ -118,13 +122,13 @@ export function AvailabilityPage() {
         // Only update when the visible dates really change (FullCalendar also fires this on option updates).
         datesSet={(d) => setRange((r) => (r?.start.getTime() === d.start.getTime() && r?.end.getTime() === d.end.getTime() ? r : { start: d.start, end: d.end }))}
         events={[
-          ...(blocks.data ?? []).map((b) => ({ id: String(b.id), start: b.start, end: b.end, title: 'Available', color: 'var(--mantine-color-green-6)' })),
+          ...(blocks.data ?? []).map((b) => ({ id: String(b.id), start: b.start, end: b.end, title: 'Available', color: 'var(--mantine-color-signal-7)' })),
           ...myInterviews.map((i) => ({
             id: `interview-${i.id}`,
             start: i.start,
             end: i.blockedUntil, // incl. buffer – you're needed in the room until then
             title: `Interview: ${i.recruit.fullName}`,
-            color: 'var(--mantine-color-blue-6)',
+            color: 'var(--mantine-color-cortex-6)',
             extendedProps: { interview: true },
           })),
         ]}
