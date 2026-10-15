@@ -49,6 +49,22 @@ public class ConcurrentBookingTests : IAsyncLifetime
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.Conflict], results.Order());
     }
 
+    [Fact]
+    public async Task Interview_marked_done_early_still_blocks_its_time()
+    {
+        var (links, start) = await Setup(linkCount: 2);
+        Assert.Equal(HttpStatusCode.OK, await Book(links[0], start, "a@test.local"));
+
+        var admin = _app.CreateClient();
+        await Ok(admin.PostAsJsonAsync("/api/auth/login", new { email = "admin@test.local", password = "Admin123!" }));
+        var interview = (await Json(admin.GetAsync("/api/interviews"))).EnumerateArray().Single();
+        await Ok(admin.PatchAsJsonAsync($"/api/interviews/{interview.GetProperty("id").GetInt32()}", new { status = "Done" }));
+
+        // The DB keeps the room blocked for Done interviews – the slot list must agree, or booking it always fails with 409.
+        var blockedUntil = start.AddMinutes(40); // 30 min + 10 min buffer
+        Assert.DoesNotContain(await Slots(links[1]), s => s < blockedUntil && s.AddMinutes(40) > start);
+    }
+
     // Section + 2 recruiters free on a day 3 days from now (beyond the 12 h notice), recruitment period around it, N links.
     async Task<(List<string> Links, DateTime FirstSlot)> Setup(int linkCount)
     {

@@ -61,7 +61,8 @@ public class SlotService(AppDbContext db, IOptions<ClubOptions> club)
                 .ToListAsync())
             .ToLookup(a => a.UserId, a => new Interval(a.Start, a.End));
         var busy = await db.Interviews
-            .Where(i => i.Status == InterviewStatus.Scheduled && i.Start < to && i.BlockedUntil > from)
+            // Same rule as the DB constraint EX_Interviews_NoOverlap: only cancelled interviews free the room.
+            .Where(i => i.Status != InterviewStatus.Cancelled && i.Start < to && i.BlockedUntil > from)
             .Select(i => new Interval(i.Start, i.BlockedUntil))
             .ToListAsync();
 
