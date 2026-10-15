@@ -1,0 +1,15 @@
+# Local development database. Credentials match appsettings.Development.json.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: rekrutime
+      POSTGRES_USER: rekrutime
+      POSTGRES_PASSWORD: rekrutime
+    ports:
+      - "5440:5432"  # 5440 on host: avoids clashing with a locally installed Postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
