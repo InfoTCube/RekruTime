@@ -12,6 +12,7 @@ import { RecruitmentPage } from './pages/admin/RecruitmentPage'
 import { SectionsPage } from './pages/admin/SectionsPage'
 import { UsersPage } from './pages/admin/UsersPage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
+import { BookingPage } from './pages/BookingPage'
 import { LoginPage } from './pages/LoginPage'
 
 const queryClient: QueryClient = new QueryClient({
@@ -26,6 +27,7 @@ const queryClient: QueryClient = new QueryClient({
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/book/:token', element: <BookingPage /> }, // public: outside the login guard
   {
     element: <Layout />,
     children: [
