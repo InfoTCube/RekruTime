@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { api, errorMessage, fieldError } from '../../api'
 
 type Template = { key: string; language: string; subject: string; body: string; isDefault: boolean }
-type Rendered = { subject: string; body: string }
+type Rendered = { subject: string; body: string; html: string }
 
 const languageNames: Record<string, string> = { pl: 'Polski', en: 'English' }
 const placeholders: [string, string][] = [
@@ -91,16 +91,21 @@ function TemplateForm({ template }: { template: Template }) {
       </Stack>
       <Paper withBorder p="md" bg="var(--mantine-color-default-hover)">
         <Text size="xs" c="dimmed" mb="xs">
-          Preview (sample recruit)
+          Preview (sample recruit) – sent as HTML, with this text as the plain-text version
         </Text>
         {preview.data ? (
           <>
             <Text fw={600} mb="sm">
               {preview.data.subject}
             </Text>
-            <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-              {preview.data.body}
-            </Text>
+            {/* sandboxed: no scripts; same-origin only to size the frame to its content */}
+            <iframe
+              title="E-mail preview"
+              srcDoc={preview.data.html}
+              sandbox="allow-same-origin"
+              style={{ width: '100%', border: 0, borderRadius: 'var(--mantine-radius-sm)' }}
+              onLoad={(e) => (e.currentTarget.style.height = `${e.currentTarget.contentDocument?.documentElement.scrollHeight ?? 600}px`)}
+            />
           </>
         ) : (
           preview.isFetching && <Loader size="sm" />

@@ -52,8 +52,13 @@ public class EmailOutboxTests : IAsyncLifetime
         Assert.True(test.IsSuccessStatusCode, await test.Content.ReadAsStringAsync());
 
         var received = await Mailpit();
-        Assert.Contains(("jan@test.local", "Zaproszenie na rozmowę"), received); // UTF-8 subject survives
-        Assert.Contains(("admin@test.local", "RekruTime: test e-mail"), received);
+        Assert.Contains(("jan@test.local", "Zaproszenie na rozmowę"), received.Select(m => (m.To, m.Subject))); // UTF-8 subject survives
+        Assert.Contains(("admin@test.local", "RekruTime: test e-mail"), received.Select(m => (m.To, m.Subject)));
+
+        // HTML + plain text alternative in one message
+        var jan = await MailpitMessage(received.Single(m => m.To == "jan@test.local").Id);
+        Assert.Equal("Treść: zażółć gęślą jaźń", jan.GetProperty("Text").GetString()!.Trim());
+        Assert.Contains("<b>zażółć</b>", jan.GetProperty("HTML").GetString());
     }
 
     [Fact]
@@ -78,7 +83,7 @@ public class EmailOutboxTests : IAsyncLifetime
         _ = app.Server; // start the host (migrations, seed, background sender)
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var m = new EmailMessage { To = to, Subject = subject, Body = "Treść: zażółć gęślą jaźń" };
+        var m = new EmailMessage { To = to, Subject = subject, Body = "Treść: zażółć gęślą jaźń", HtmlBody = "<p>Treść: <b>zażółć</b> gęślą jaźń</p>" };
         db.EmailMessages.Add(m);
         await db.SaveChangesAsync();
         return m.Id;
@@ -96,11 +101,19 @@ public class EmailOutboxTests : IAsyncLifetime
         throw new TimeoutException($"E-mail {id} didn't reach the expected state in 30 s.");
     }
 
-    async Task<List<(string To, string Subject)>> Mailpit()
+    string MailpitApi => $"http://{_mailpit.Hostname}:{_mailpit.GetMappedPublicPort(8025)}/api/v1";
+
+    async Task<List<(string Id, string To, string Subject)>> Mailpit()
     {
         using var http = new HttpClient();
-        var json = await http.GetFromJsonAsync<JsonElement>($"http://{_mailpit.Hostname}:{_mailpit.GetMappedPublicPort(8025)}/api/v1/messages");
+        var json = await http.GetFromJsonAsync<JsonElement>($"{MailpitApi}/messages");
         return json.GetProperty("messages").EnumerateArray()
-            .Select(m => (m.GetProperty("To")[0].GetProperty("Address").GetString()!, m.GetProperty("Subject").GetString()!)).ToList();
+            .Select(m => (m.GetProperty("ID").GetString()!, m.GetProperty("To")[0].GetProperty("Address").GetString()!, m.GetProperty("Subject").GetString()!)).ToList();
+    }
+
+    async Task<JsonElement> MailpitMessage(string id)
+    {
+        using var http = new HttpClient();
+        return await http.GetFromJsonAsync<JsonElement>($"{MailpitApi}/message/{id}");
     }
 }

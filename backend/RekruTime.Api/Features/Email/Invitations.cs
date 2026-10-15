@@ -3,6 +3,7 @@ using System.Globalization;
 namespace RekruTime.Api.Features.Email;
 
 public record Template(string Subject, string Body);
+public record RenderedEmail(string Subject, string Body, string Html);
 
 public record InvitationValues(string? Name, string Link, IEnumerable<string> Sections, DateOnly? Deadline, string? Contact);
 
@@ -48,9 +49,19 @@ public static class Invitations
             """),
     };
 
+    // Fixed parts of the HTML version around the editable text (EmailHtml).
+    public static readonly Dictionary<string, HtmlTexts> Html = new()
+    {
+        ["pl"] = new("Wybierz termin", "Przycisk nie działa? Otwórz ten link:",
+            "Dostajesz tę wiadomość, bo zgłosiłeś(-aś) się do rekrutacji. Link jest osobisty – nie przekazuj go dalej."),
+        ["en"] = new("Choose a time", "Button not working? Open this link:",
+            "You're receiving this because you applied to our recruitment. The link is personal – please don't forward it."),
+    };
+
     public static readonly string[] Placeholders = ["{firstName}", "{name}", "{link}", "{sections}", "{deadline}", "{contact}"];
 
-    public static Template Render(Template t, InvitationValues v, string language)
+    // header = title bar of the HTML version (the sender name), null = none.
+    public static RenderedEmail Render(Template t, InvitationValues v, string language, string? header = null)
     {
         var culture = CultureInfo.GetCultureInfo(language);
         var values = new Dictionary<string, string>
@@ -62,7 +73,8 @@ public static class Invitations
             ["{deadline}"] = v.Deadline?.ToString("d MMMM yyyy", culture) ?? "",
             ["{contact}"] = v.Contact ?? "",
         };
-        return new(Fill(t.Subject, values), Fill(t.Body, values));
+        var body = Fill(t.Body, values);
+        return new(Fill(t.Subject, values), body, EmailHtml.Build(body, v.Link, Html.GetValueOrDefault(language, Html["pl"]), header));
     }
 
     // An empty value takes the space before it along ("Cześć {name}!" → "Cześć!" for anonymous links).

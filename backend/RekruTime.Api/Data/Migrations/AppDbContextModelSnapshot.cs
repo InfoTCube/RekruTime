@@ -395,6 +395,9 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("HtmlBody")
+                        .HasColumnType("text");
+
                     b.Property<string>("LastError")
                         .HasColumnType("text");
 

@@ -35,9 +35,10 @@ public class SmtpMailer(Microsoft.Extensions.Options.IOptions<EmailOptions> opti
         return client;
     }
 
-    public Task SendAsync(SmtpClient client, string to, string? toName, string subject, string body, CancellationToken ct)
+    public Task SendAsync(SmtpClient client, string to, string? toName, string subject, string body, string? html, CancellationToken ct)
     {
-        var msg = new MimeMessage { Subject = subject, Body = new TextPart("plain") { Text = body } };
+        // With HTML: multipart/alternative – clients show HTML, the plain text is the fallback.
+        var msg = new MimeMessage { Subject = subject, Body = new BodyBuilder { TextBody = body, HtmlBody = html }.ToMessageBody() };
         msg.From.Add(new MailboxAddress(_o.FromName, _o.FromAddress!));
         msg.To.Add(new MailboxAddress(toName ?? "", to));
         if (!string.IsNullOrWhiteSpace(_o.ReplyTo)) msg.ReplyTo.Add(MailboxAddress.Parse(_o.ReplyTo));
@@ -85,7 +86,7 @@ public class EmailSender(IServiceScopeFactory scopes, SmtpMailer mailer, Microso
                 try
                 {
                     client ??= await mailer.ConnectAsync(ct);
-                    await mailer.SendAsync(client, m.To, m.ToName, m.Subject, m.Body, ct);
+                    await mailer.SendAsync(client, m.To, m.ToName, m.Subject, m.Body, m.HtmlBody, ct);
                     (m.Status, m.SentAt, m.LastError) = (EmailStatus.Sent, DateTime.UtcNow, null);
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
