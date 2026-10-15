@@ -11,5 +11,12 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Catches every e-mail the app sends in development. Web UI: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # web UI
+
 volumes:
   pgdata:

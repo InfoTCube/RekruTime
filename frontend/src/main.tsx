@@ -7,6 +7,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 import { ApiError } from './api'
 import { meKey } from './auth'
 import { Layout, RequireAdmin } from './Layout'
+import { EmailPage } from './pages/admin/EmailPage'
 import { LinksPage } from './pages/admin/LinksPage'
 import { RecruitmentPage } from './pages/admin/RecruitmentPage'
 import { SectionsPage } from './pages/admin/SectionsPage'
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
         children: [
           { path: 'recruitment', element: <RecruitmentPage /> },
           { path: 'links', element: <LinksPage /> },
+          { path: 'email', element: <EmailPage /> },
           { path: 'users', element: <UsersPage /> },
           { path: 'sections', element: <SectionsPage /> },
         ],

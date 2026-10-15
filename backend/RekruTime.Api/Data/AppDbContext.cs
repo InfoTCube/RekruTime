@@ -14,12 +14,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Application> Applications => Set<Application>();
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<RecruitmentSettings> RecruitmentSettings => Set<RecruitmentSettings>();
+    public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder b)
     {
         // Enums as text: readable in SQL, and the overlap constraint filters on 'Cancelled'.
         b.Properties<ApplicationStatus>().HaveConversion<string>();
         b.Properties<InterviewStatus>().HaveConversion<string>();
+        b.Properties<EmailStatus>().HaveConversion<string>();
     }
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -49,6 +51,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
         b.Entity<RecruitmentSettings>().Property(s => s.Id).ValueGeneratedNever();
         b.Entity<RecruitmentSettings>().ToTable(t => t.HasCheckConstraint("CK_RecruitmentSettings_Single", "\"Id\" = 1"));
+
+        b.Entity<EmailMessage>().HasOne<BookingLink>().WithMany().HasForeignKey(m => m.BookingLinkId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<EmailMessage>().HasIndex(m => new { m.Status, m.NextAttemptAt });
 
         b.Entity<Recruit>().HasIndex(r => r.Email).IsUnique();
         b.Entity<Recruit>().Property(r => r.DiscordNickname).HasMaxLength(50);

@@ -172,6 +172,17 @@ Public:
 8. Interviews list (recruiter/admin), admin cancel/reassign
 9. Deploy (Docker image, HTTPS via reverse proxy, DB backups)
 
+### 1.7 Import & invitations (pulled into the MVP from phases 3–4)
+
+The club's applications come from a Google Form, so the MVP closes with:
+- **E-mail sending** (#62): any SMTP server from config (club Gmail with app password, or a relay like Brevo as the fallback – `docs/EMAIL.md`); `EmailMessage` outbox + background sender with retry/backoff and throttling; admin page with a test e-mail and statuses; Mailpit in dev.
+- **Invitation templates per language** (#63): subject/body with placeholders, Polish default + English; `BookingLink.Language`.
+- **Import** (#64): paste/upload the Forms CSV, map columns (name, e-mail, sections, language), merge rows by e-mail, **preview** (unknown section / invalid e-mail / already invited), then create links and queue invitations in one go; re-import is idempotent.
+- **Invitation status & resend** on the links page (#65).
+- **Booking page in Polish + English** (#66), dictionary per language.
+
+Phase 3 (forms) then replaces the CSV with RekruTime's own form; phase 4 adds confirmation/decision e-mails on top of the same outbox.
+
 ---
 
 ## 2. Post-recruitment: notes + approvals
@@ -261,6 +272,9 @@ Reuses the MVP booking flow and link model unchanged – links are already indiv
 6. Rejection needs leader + admin both rejecting; split vote → another admin has the final say.
 7. One room for now.
 8. Booking only for interview dates inside one global recruitment period set by an admin (#50).
+9. Recruits are imported from the Google Form export and invited by e-mail with personal links (#62–#66).
+10. E-mail via any SMTP server: club Gmail first, a relay (Brevo) as the fallback; CSV export always works.
+11. Recruit-facing texts in Polish by default, English included, more languages = one dictionary file each.
 
 ## Future (not planned in detail)
 
