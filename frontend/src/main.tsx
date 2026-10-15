@@ -9,6 +9,7 @@ import { meKey } from './auth'
 import { Layout, RequireAdmin, Todo } from './Layout'
 import { SectionsPage } from './pages/admin/SectionsPage'
 import { UsersPage } from './pages/admin/UsersPage'
+import { AvailabilityPage } from './pages/AvailabilityPage'
 import { LoginPage } from './pages/LoginPage'
 
 const queryClient: QueryClient = new QueryClient({
@@ -27,7 +28,7 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <Navigate to="/interviews" replace /> },
-      { path: 'availability', element: <Todo title="My availability" /> },
+      { path: 'availability', element: <AvailabilityPage /> },
       { path: 'interviews', element: <Todo title="Interviews" /> },
       {
         path: 'admin',
