@@ -12,6 +12,7 @@ const nav = [
   { to: '/admin/links', label: 'Booking links', admin: true },
   { to: '/admin/users', label: 'Users', admin: true },
   { to: '/admin/sections', label: 'Sections', admin: true },
+  { to: '/admin/email', label: 'E-mail', admin: true },
 ]
 
 // Guard + shell for every logged-in page.

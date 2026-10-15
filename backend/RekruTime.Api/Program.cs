@@ -5,6 +5,7 @@ using RekruTime.Api.Data;
 using RekruTime.Api.Features.Auth;
 using RekruTime.Api.Features.Availability;
 using RekruTime.Api.Features.Booking;
+using RekruTime.Api.Features.Email;
 using RekruTime.Api.Features.Interviews;
 using RekruTime.Api.Features.Recruits;
 using RekruTime.Api.Features.Sections;
@@ -17,6 +18,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 builder.Services.AddOpenApi();
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.AddSingleton<SmtpMailer>();
+builder.Services.AddSingleton<EmailSender>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<EmailSender>()); // delivers the outbox
 builder.Services.AddSingleton(TimeZoneInfo.FindSystemTimeZoneById(builder.Configuration["Club:TimeZone"]!)); // dates → UTC
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
@@ -76,6 +81,7 @@ app.MapBookingLinkEndpoints();
 app.MapPublicBookingEndpoints();
 app.MapInterviewEndpoints();
 app.MapRecruitEndpoints();
+app.MapEmailEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
 app.MapFallbackToFile("index.html");                        // client-side routes
