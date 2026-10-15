@@ -72,6 +72,3 @@ export function RequireAdmin() {
   const me = useMe()
   return isAdmin(me.data) ? <Outlet /> : <Navigate to="/" replace />
 }
-
-// ponytail: placeholder pages until their issues land (#9, #11, #14, #19)
-export const Todo = ({ title }: { title: string }) => <Title order={2}>{title}</Title>

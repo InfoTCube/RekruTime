@@ -8,7 +8,9 @@ import { useMediaQuery } from '@mantine/hooks'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { api, errorMessage } from '../api'
+import { useMe } from '../auth'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { useInterviews } from '../interviews'
 import { formatDay, periodRange, useRecruitmentPeriod } from '../recruitment'
 import '../calendar.css'
 
@@ -36,6 +38,10 @@ export function AvailabilityPage() {
     placeholderData: keepPreviousData, // no flicker when switching weeks
   })
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['availability'] })
+  // Own scheduled interviews on top (admins get everyone's from the API → keep only mine).
+  const me = useMe()
+  const interviews = useInterviews({ from: range?.start.toISOString(), to: range?.end.toISOString(), status: 'Scheduled' }, !!range)
+  const myInterviews = (interviews.data ?? []).filter((i) => i.interviewers.some((p) => p.id === me.data?.id))
 
   const add = useMutation({
     mutationFn: (r: Range) => api('/api/availability', { method: 'POST', json: { start: r.start.toISOString(), end: r.end.toISOString() } }),
@@ -54,6 +60,7 @@ export function AvailabilityPage() {
     setRemoving(r)
   }
   const onEventClick = (e: EventClickArg) => {
+    if (e.event.extendedProps.interview) return // read-only
     remove.reset()
     setRemoving({ start: e.event.start!, end: e.event.end! })
   }
@@ -110,7 +117,17 @@ export function AvailabilityPage() {
         select={onSelect}
         // Only update when the visible dates really change (FullCalendar also fires this on option updates).
         datesSet={(d) => setRange((r) => (r?.start.getTime() === d.start.getTime() && r?.end.getTime() === d.end.getTime() ? r : { start: d.start, end: d.end }))}
-        events={(blocks.data ?? []).map((b) => ({ id: String(b.id), start: b.start, end: b.end, title: 'Available', color: 'var(--mantine-color-green-6)' }))}
+        events={[
+          ...(blocks.data ?? []).map((b) => ({ id: String(b.id), start: b.start, end: b.end, title: 'Available', color: 'var(--mantine-color-green-6)' })),
+          ...myInterviews.map((i) => ({
+            id: `interview-${i.id}`,
+            start: i.start,
+            end: i.blockedUntil, // incl. buffer – you're needed in the room until then
+            title: `Interview: ${i.recruit.fullName}`,
+            color: 'var(--mantine-color-blue-6)',
+            extendedProps: { interview: true },
+          })),
+        ]}
         eventClick={onEventClick}
       />
 
