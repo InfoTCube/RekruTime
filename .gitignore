@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Production database dumps (docker-compose.prod.yml backup service)
+backups/
