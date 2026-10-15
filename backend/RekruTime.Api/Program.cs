@@ -4,6 +4,7 @@ using RekruTime.Api.Data;
 using RekruTime.Api.Features.Auth;
 using RekruTime.Api.Features.Availability;
 using RekruTime.Api.Features.Sections;
+using RekruTime.Api.Features.Settings;
 using RekruTime.Api.Features.Users;
 using Scalar.AspNetCore;
 
@@ -54,6 +55,7 @@ app.MapAuthEndpoints();
 app.MapSectionEndpoints();
 app.MapUserEndpoints();
 app.MapAvailabilityEndpoints();
+app.MapSettingsEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
 app.MapFallbackToFile("index.html");                        // client-side routes

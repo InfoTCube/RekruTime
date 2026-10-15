@@ -43,6 +43,7 @@ docker-compose.yml
 - Users ↔ Sections is many-to-many, managed by admins.
 - Each section has `InterviewDurationMinutes` (default 30) and optional `BufferMinutes` (default 0) – room time after the interview for notes/changeover.
 - **One room** → interviews (incl. buffer) can never overlap globally, regardless of section. Multiple rooms + online come later (see Future).
+- **Recruitment period**: one global date range (club time zone, inclusive) set by an admin. Interviews can only be booked for times inside it; no period set = booking closed.
 - A booking link is **individual** (one recruit, one booking) and targets a **set of sections** `S` (1 or more).
 - For a link: `D = max(duration in S)`, `B = max(buffer in S)`. Room is blocked for `[t, t+D+B)`; interviewers must be available for the whole `[t, t+D+B)`.
 
@@ -64,6 +65,7 @@ This gives exactly the required combinations for a single section: *2 people fro
 
 ```
 AppUser : IdentityUser       DisplayName
+RecruitmentSettings          Id = 1 (single row), InterviewsFrom?, InterviewsTo?   (DateOnly, club time zone)
 Section                      Id, Name, InterviewDurationMinutes = 30, BufferMinutes = 0
 UserSection                  UserId, SectionId                 (PK both)
 Availability                 Id, UserId, Start, End            (UTC)
@@ -101,6 +103,9 @@ Auth / users
 - `GET/POST/PUT/DELETE /api/users` (Admin) – create user with temp password, set role, assign sections
 - `GET/POST/PUT/DELETE /api/sections` (Admin; GET for all logged in)
 
+Recruitment period
+- `GET /api/settings/recruitment` (any logged in), `PUT` (Admin) `{interviewsFrom, interviewsTo}` – both set or both null
+
 Availability (Recruiter/Admin, own data)
 - `GET /api/availability?from&to`
 - `POST /api/availability` `{start,end}` – merged with adjacent/overlapping blocks server-side
@@ -126,7 +131,7 @@ Interviews
 ### 1.4 Slot algorithm (`SlotCalculator`, pure function → unit tested)
 
 ```
-input: sections S, duration D, buffer B, range [from,to], step = 15 min, minNotice (e.g. 12h)
+input: sections S, duration D, buffer B, range [from,to] ∩ recruitment period, step = 15 min, minNotice (e.g. 12h)
 people   = relevant users for S with their section sets + isAdmin
 blocks   = merged availability per person in range
 busy     = scheduled interviews in range, as [Start, BlockedUntil)
@@ -144,7 +149,8 @@ Unit tests (the one place to test hard): single section 2 recruiters; admin + re
 
 Logged in:
 - `/login`
-- `/availability` – FullCalendar week view; drag to add, click to remove; own interviews shown read-only on top
+- `/availability` – FullCalendar week view limited to the recruitment period; drag to add, click to remove; own interviews shown read-only on top
+- `/admin/recruitment` – set the recruitment period (two date inputs) or close booking
 - `/interviews` – list/calendar of my interviews (Admin: all, with section filter)
 - `/admin/users`, `/admin/sections` (name, duration, buffer), `/admin/links` (bulk create from pasted list, copy/CSV export, used/unused status, deactivate, coverage preview)
 
@@ -159,6 +165,7 @@ Public:
 2. Identity + roles + seed first admin from config; login page; route guards
 3. Sections + users admin CRUD + section assignment
 4. Availability API + FullCalendar editor
+4b. Recruitment period setting (#50)
 5. `SlotCalculator` + unit tests
 6. Individual booking links (bulk create, CSV export) + public slots endpoint + booking page with yellow toggle
 7. Booking endpoint with exclusion constraint + one-booking-per-link index + 409 handling
@@ -253,6 +260,7 @@ Reuses the MVP booking flow and link model unchanged – links are already indiv
 5. Buffer between interviews: optional per section (`BufferMinutes`, default 0).
 6. Rejection needs leader + admin both rejecting; split vote → another admin has the final say.
 7. One room for now.
+8. Booking only for interview dates inside one global recruitment period set by an admin (#50).
 
 ## Future (not planned in detail)
 

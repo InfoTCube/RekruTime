@@ -446,6 +446,25 @@ namespace RekruTime.Api.Data.Migrations
                     b.ToTable("Recruits");
                 });
 
+            modelBuilder.Entity("RekruTime.Api.Data.RecruitmentSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("InterviewsFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("InterviewsTo")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RecruitmentSettings", t =>
+                        {
+                            t.HasCheckConstraint("CK_RecruitmentSettings_Single", "\"Id\" = 1");
+                        });
+                });
+
             modelBuilder.Entity("RekruTime.Api.Data.Section", b =>
                 {
                     b.Property<int>("Id")
