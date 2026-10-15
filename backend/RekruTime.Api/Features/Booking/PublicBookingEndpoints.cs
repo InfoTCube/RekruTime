@@ -7,7 +7,7 @@ namespace RekruTime.Api.Features.Booking;
 public record BookingDto(DateTime Start, DateTime End);
 public record PublicLinkDto(
     List<string> Sections, int DurationMinutes, string? ContactEmail, string? Location,
-    DateOnly? InterviewsFrom, DateOnly? InterviewsTo, string? Name, string? Email, BookingDto? Booking);
+    DateOnly? InterviewsFrom, DateOnly? InterviewsTo, string? Name, string? Email, string Language, BookingDto? Booking);
 public record PublicSlotDto(DateTime Start, DateTime End, SlotColor Color); // no interviewer names for recruits
 
 public record BookRequest(
@@ -37,7 +37,7 @@ public static class PublicBookingEndpoints
                 link.Sections.Max(s => s.InterviewDurationMinutes),
                 NullIfEmpty(config["Club:ContactEmail"]), NullIfEmpty(config["Club:InterviewLocation"]),
                 period?.InterviewsFrom, period?.InterviewsTo,
-                link.Recruit?.FullName is { Length: > 0 } n ? n : null, link.Recruit?.Email,
+                link.Recruit?.FullName is { Length: > 0 } n ? n : null, link.Recruit?.Email, link.Language,
                 await Booking(db, link.Id)));
         });
 
