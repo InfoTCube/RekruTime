@@ -15,6 +15,7 @@ export function RecruitmentPage() {
       {period.isPending && <Loader />}
       {period.isError && <Alert color="red">{errorMessage(period.error)}</Alert>}
       {period.data && <PeriodForm key={`${period.data.interviewsFrom}-${period.data.interviewsTo}`} initial={period.data} />}
+      <PurgeRecruitData />
     </Stack>
   )
 }
@@ -62,6 +63,43 @@ function PeriodForm({ initial }: { initial: RecruitmentPeriod }) {
           </Group>
         </Stack>
       </form>
+    </Paper>
+  )
+}
+
+const PURGE_WORDS = 'DELETE ALL'
+
+// GDPR: after the recruitment, wipe every recruit with their interviews and links.
+function PurgeRecruitData() {
+  const queryClient = useQueryClient()
+  const [confirm, setConfirm] = useState('')
+  const purge = useMutation({
+    mutationFn: () => api<{ deletedRecruits: number }>('/api/recruits/purge', { method: 'POST', json: { confirm } }),
+    onSuccess: () => {
+      setConfirm('')
+      queryClient.invalidateQueries({ queryKey: ['interviews'] })
+      queryClient.invalidateQueries({ queryKey: ['booking-links'] })
+    },
+  })
+  return (
+    <Paper withBorder p="md">
+      <Stack>
+        <Text fw={600} c="red">
+          Delete all recruit data
+        </Text>
+        <Text size="sm">
+          When the recruitment is over, permanently delete all recruits with their interviews, applications and booking links. Users, sections and
+          availability stay. This can't be undone.
+        </Text>
+        {purge.isSuccess && <Alert color="green">Deleted {purge.data.deletedRecruits} recruits.</Alert>}
+        {purge.isError && <Alert color="red">{errorMessage(purge.error)}</Alert>}
+        <TextInput label={`Type "${PURGE_WORDS}" to confirm`} value={confirm} onChange={(e) => setConfirm(e.currentTarget.value)} />
+        <Group justify="flex-end">
+          <Button color="red" disabled={confirm !== PURGE_WORDS} loading={purge.isPending} onClick={() => purge.mutate()}>
+            Delete all recruit data
+          </Button>
+        </Group>
+      </Stack>
     </Paper>
   )
 }

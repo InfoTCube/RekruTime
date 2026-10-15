@@ -132,6 +132,7 @@ public static class PublicBookingEndpoints
         // Keep the admin's e-mail if the new one belongs to another recruit (unique e-mail).
         if (recruit.Email != email && !await db.Recruits.AnyAsync(r => r.Email == email)) recruit.Email = email;
         recruit.FullName = req.FullName.Trim();
+        recruit.ConsentAt = DateTime.UtcNow;
         recruit.Phone = string.IsNullOrWhiteSpace(req.Phone) ? recruit.Phone : req.Phone.Trim();
         recruit.DiscordNickname = string.IsNullOrWhiteSpace(req.DiscordNickname) ? recruit.DiscordNickname : req.DiscordNickname.Trim().TrimStart('@');
         return recruit;

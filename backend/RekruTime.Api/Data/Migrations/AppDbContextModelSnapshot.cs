@@ -424,6 +424,9 @@ namespace RekruTime.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("ConsentAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -646,7 +649,8 @@ namespace RekruTime.Api.Data.Migrations
 
                     b.HasOne("RekruTime.Api.Data.Recruit", "Recruit")
                         .WithMany()
-                        .HasForeignKey("RecruitId");
+                        .HasForeignKey("RecruitId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Recruit");
                 });
