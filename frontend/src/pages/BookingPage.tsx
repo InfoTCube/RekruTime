@@ -1,8 +1,9 @@
-import { Alert, Anchor, Badge, Button, Checkbox, Chip, Collapse, Container, Group, Loader, Paper, SimpleGrid, Stack, Switch, Text, TextInput, Title } from '@mantine/core'
+import { Alert, Anchor, Badge, Button, Checkbox, Chip, Collapse, Container, Group, Loader, Paper, SegmentedControl, SimpleGrid, Stack, Switch, Text, TextInput, Title } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { useParams } from 'react-router'
-import { api, ApiError, errorMessage, fieldError } from '../api'
+import { api, ApiError, fieldError } from '../api'
+import { defaultLanguage, dictionaries, type Dictionary } from '../locales'
 
 type LinkInfo = {
   sections: string[]
@@ -13,34 +14,79 @@ type LinkInfo = {
   interviewsTo: string | null
   name: string | null
   email: string | null
+  language: string
   booking: { start: string; end: string } | null
 }
 type Slot = { start: string; end: string; color: 'Green' | 'Yellow' }
 
-const dayKey = (iso: string) => new Date(iso).toLocaleDateString('en-CA') // YYYY-MM-DD, local
-const dayLabel = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-const longDay = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
-const time = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+const T = createContext<Dictionary>(dictionaries[defaultLanguage])
+const dayKey = (iso: string) => new Date(iso).toLocaleDateString('en-CA') // YYYY-MM-DD, local – a key, not shown
+
+function useFormat() {
+  const { locale } = useContext(T)
+  return {
+    dayLabel: (iso: string) => new Date(iso).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' }),
+    longDay: (iso: string) => new Date(iso).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }),
+    time: (iso: string) => new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+  }
+}
+
+// The visitor's own choice is remembered in this browser; storage may be unavailable (private mode) – then just don't remember.
+const LANGUAGE_KEY = 'rekrutime.booking.language'
+const storedLanguage = () => {
+  try {
+    return localStorage.getItem(LANGUAGE_KEY)
+  } catch {
+    return null
+  }
+}
 
 // Public page – recruits have no account; the token in the URL is the key.
 export function BookingPage() {
   const { token } = useParams()
   const base = `/api/public/links/${token}`
   const info = useQuery({ queryKey: ['public-link', token], queryFn: () => api<LinkInfo>(base), retry: false })
+  const [chosen, setChosen] = useState(storedLanguage)
+  const language = [chosen, info.data?.language, defaultLanguage].find((l) => l && dictionaries[l])!
+  const t = dictionaries[language]
+
+  useEffect(() => {
+    document.documentElement.lang = language
+    document.title = t.title
+  }, [language, t])
+
+  const choose = (l: string) => {
+    setChosen(l)
+    try {
+      localStorage.setItem(LANGUAGE_KEY, l)
+    } catch {
+      /* not remembered – fine */
+    }
+  }
 
   return (
-    <Container size="sm" py="xl" px="md">
-      <Stack>
-        <Title order={2}>Book your interview</Title>
-        {info.isPending && <Loader />}
-        {info.isError && (
-          <Alert color="red" title={info.error instanceof ApiError && info.error.status === 410 ? 'This link has expired' : 'This link is not valid'}>
-            Please contact the person who sent it to you.
-          </Alert>
-        )}
-        {info.data && (info.data.booking ? <Booked info={info.data} /> : <Booking info={info.data} base={base} />)}
-      </Stack>
-    </Container>
+    <T.Provider value={t}>
+      <Container size="sm" py="xl" px="md">
+        <Stack>
+          <Group justify="space-between" align="flex-start" wrap="nowrap">
+            <Title order={2}>{t.title}</Title>
+            <SegmentedControl
+              size="xs"
+              value={language}
+              onChange={choose}
+              data={Object.entries(dictionaries).map(([value, d]) => ({ value, label: value.toUpperCase(), title: d.name }))}
+            />
+          </Group>
+          {info.isPending && <Loader />}
+          {info.isError && (
+            <Alert color="red" title={info.error instanceof ApiError && info.error.status === 410 ? t.linkExpired : t.linkInvalid}>
+              {t.linkProblemHelp}
+            </Alert>
+          )}
+          {info.data && (info.data.booking ? <Booked info={info.data} /> : <Booking info={info.data} base={base} />)}
+        </Stack>
+      </Container>
+    </T.Provider>
   )
 }
 
@@ -48,12 +94,13 @@ function Contact({ info, children }: { info: LinkInfo; children: React.ReactNode
   if (!info.contactEmail) return null
   return (
     <Text size="sm">
-      {children} <Anchor href={`mailto:${info.contactEmail}`}>{info.contactEmail}</Anchor>.
+      {children} <Anchor href={`mailto:${info.contactEmail}`}>{info.contactEmail}</Anchor>
     </Text>
   )
 }
 
 function Header({ info }: { info: LinkInfo }) {
+  const t = useContext(T)
   return (
     <Group gap="xs">
       {info.sections.map((s) => (
@@ -62,29 +109,34 @@ function Header({ info }: { info: LinkInfo }) {
         </Badge>
       ))}
       <Text size="sm" c="dimmed">
-        {info.durationMinutes} min{info.location && ` · ${info.location}`}
+        {t.minutes(info.durationMinutes)}
+        {info.location && ` · ${info.location}`}
       </Text>
     </Group>
   )
 }
 
 function Booked({ info }: { info: LinkInfo }) {
+  const t = useContext(T)
+  const f = useFormat()
   const b = info.booking!
   return (
     <Stack>
       <Header info={info} />
-      <Alert color="green" title="Your interview is booked">
+      <Alert color="green" title={t.booked}>
         <Text fw={500}>
-          {longDay(b.start)}, {time(b.start)}–{time(b.end)}
+          {f.longDay(b.start)}, {f.time(b.start)}–{f.time(b.end)}
         </Text>
         {info.location && <Text>{info.location}</Text>}
       </Alert>
-      <Contact info={info}>Need to change it? Write to us at</Contact>
+      <Contact info={info}>{t.needChange}</Contact>
     </Stack>
   )
 }
 
 function Booking({ info, base }: { info: LinkInfo; base: string }) {
+  const t = useContext(T)
+  const f = useFormat()
   const queryClient = useQueryClient()
   const [showYellow, setShowYellow] = useState(false)
   const [day, setDay] = useState<string | null>(null)
@@ -102,20 +154,24 @@ function Booking({ info, base }: { info: LinkInfo; base: string }) {
   return (
     <Stack>
       <Header info={info} />
-      <Text>Pick a time that suits you. Times are shown in your local time.</Text>
+      <Text>{t.pickTime}</Text>
 
       {slots.isPending && <Loader />}
-      {slots.isError && <Alert color="red">{errorMessage(slots.error)}</Alert>}
-      {slots.data?.length === 0 && (
-        <Alert color="gray">{showYellow ? 'There are no free times at the moment.' : 'There are no free times that fit at the moment.'}</Alert>
-      )}
+      {slots.isError && <Alert color="red">{t.somethingWrong}</Alert>}
+      {slots.data?.length === 0 && <Alert color="gray">{showYellow ? t.noTimes : t.noGreenTimes}</Alert>}
 
       {days.length > 0 && (
-        <Chip.Group value={selectedDay} onChange={(v) => (setDay(v as string), setPicked(null))}>
+        <Chip.Group
+          value={selectedDay}
+          onChange={(v) => {
+            setDay(v as string)
+            setPicked(null)
+          }}
+        >
           <Group gap="xs">
             {days.map((d) => (
               <Chip key={d} value={d}>
-                {dayLabel(`${d}T12:00:00`)}
+                {f.dayLabel(`${d}T12:00:00`)}
               </Chip>
             ))}
           </Group>
@@ -130,23 +186,24 @@ function Booking({ info, base }: { info: LinkInfo; base: string }) {
               color={s.color === 'Green' ? 'green' : 'yellow'}
               onClick={() => setPicked(s)}
             >
-              {time(s.start)}
+              {f.time(s.start)}
             </Button>
           ))}
         </SimpleGrid>
       )}
 
       <Switch
-        label="None of these times suit me"
+        label={t.noneSuit}
         checked={showYellow}
-        onChange={(e) => (setShowYellow(e.currentTarget.checked), setPicked(null))}
+        onChange={(e) => {
+          setShowYellow(e.currentTarget.checked)
+          setPicked(null)
+        }}
       />
       {showYellow && (
         <Stack gap={4}>
-          <Text size="sm">
-            Times marked in <b>yellow</b> are also possible, but fewer of us are available then – please use them only if no green time works.
-          </Text>
-          <Contact info={info}>If none of these times suit you either, contact us at</Contact>
+          <Text size="sm">{t.yellowExplained}</Text>
+          <Contact info={info}>{t.contactIfNone}</Contact>
         </Stack>
       )}
 
@@ -159,6 +216,7 @@ function Booking({ info, base }: { info: LinkInfo; base: string }) {
           onConflict={() => {
             setPicked(null)
             queryClient.invalidateQueries({ queryKey: ['public-slots', base] })
+            queryClient.invalidateQueries({ queryKey: ['public-link'] }) // if the link got booked (e.g. other tab) → "booked" view
           }}
         />
       )}
@@ -167,9 +225,11 @@ function Booking({ info, base }: { info: LinkInfo; base: string }) {
 }
 
 function BookingForm({ info, base, slot, onConflict }: { info: LinkInfo; base: string; slot: Slot; onConflict: () => void }) {
+  const t = useContext(T)
+  const f = useFormat()
   const queryClient = useQueryClient()
   const [form, setForm] = useState({ fullName: info.name ?? '', email: info.email ?? '', discordNickname: '', phone: '', gdprConsent: false })
-  const [conflict, setConflict] = useState<string | null>(null)
+  const [conflict, setConflict] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
 
   const book = useMutation({
@@ -177,11 +237,14 @@ function BookingForm({ info, base, slot, onConflict }: { info: LinkInfo; base: s
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['public-link'] }), // page switches to "booked"
     onError: (e) => {
       if (e instanceof ApiError && e.status === 409) {
-        setConflict(e.message)
+        setConflict(true)
         onConflict()
       }
     },
   })
+  // Server messages are English – show our own translated ones instead.
+  const invalid = (field: string, message: string) => (fieldError(book.error, field) ? message : undefined)
+  const fieldProblem = ['FullName', 'Email', 'DiscordNickname', 'Phone'].some((k) => fieldError(book.error, k))
 
   return (
     <Paper withBorder p="md">
@@ -193,42 +256,33 @@ function BookingForm({ info, base, slot, onConflict }: { info: LinkInfo; base: s
       >
         <Stack>
           <Text fw={500}>
-            {longDay(slot.start)}, {time(slot.start)}–{time(slot.end)}
+            {f.longDay(slot.start)}, {f.time(slot.start)}–{f.time(slot.end)}
           </Text>
-          {conflict && <Alert color="orange">{conflict}</Alert>}
-          {book.isError && !conflict && !fieldError(book.error, 'FullName') && !fieldError(book.error, 'Email') && (
-            <Alert color="red">{errorMessage(book.error)}</Alert>
-          )}
-          <TextInput label="Full name" required autoComplete="name" value={form.fullName} error={fieldError(book.error, 'FullName')} onChange={(e) => setForm({ ...form, fullName: e.currentTarget.value })} />
-          <TextInput label="E-mail" type="email" required autoComplete="email" value={form.email} error={fieldError(book.error, 'Email')} onChange={(e) => setForm({ ...form, email: e.currentTarget.value })} />
+          {conflict && <Alert color="orange">{t.taken}</Alert>}
+          {book.isError && !conflict && !fieldProblem && <Alert color="red">{t.somethingWrong}</Alert>}
+          <TextInput label={t.fullName} required autoComplete="name" value={form.fullName} error={invalid('FullName', t.invalidName)} onChange={(e) => setForm({ ...form, fullName: e.currentTarget.value })} />
+          <TextInput label={t.email} type="email" required autoComplete="email" value={form.email} error={invalid('Email', t.invalidEmail)} onChange={(e) => setForm({ ...form, email: e.currentTarget.value })} />
           <TextInput
-            label="Discord nickname"
-            description="Optional, but recommended – we talk to members on Discord."
-            placeholder="e.g. jan_kowalski"
+            label={t.discord}
+            description={t.discordHelp}
+            placeholder={t.discordPlaceholder}
             autoComplete="off"
             value={form.discordNickname}
-            error={fieldError(book.error, 'DiscordNickname')}
+            error={invalid('DiscordNickname', t.invalidDiscord)}
             onChange={(e) => setForm({ ...form, discordNickname: e.currentTarget.value })}
           />
-          <TextInput label="Phone (optional)" type="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.currentTarget.value })} />
-          <Checkbox
-            required
-            checked={form.gdprConsent}
-            onChange={(e) => setForm({ ...form, gdprConsent: e.currentTarget.checked })}
-            label="I agree to the processing of my personal data for the purpose of this recruitment."
-          />
+          <TextInput label={t.phone} type="tel" autoComplete="tel" value={form.phone} error={invalid('Phone', t.invalidPhone)} onChange={(e) => setForm({ ...form, phone: e.currentTarget.value })} />
+          <Checkbox required checked={form.gdprConsent} onChange={(e) => setForm({ ...form, gdprConsent: e.currentTarget.checked })} label={t.consent} />
           <Anchor component="button" type="button" size="sm" onClick={() => setPrivacyOpen((o) => !o)}>
-            How we use your data
+            {t.privacyLink}
           </Anchor>
           <Collapse expanded={privacyOpen}>
             <Text size="sm" c="dimmed">
-              We use your name, e-mail, phone and Discord nickname only to organise your interview and the recruitment decision. Only the
-              recruitment team can see them. We delete them after the recruitment ends. You can ask us to see, correct or delete your data at any
-              time{info.contactEmail ? ` by writing to ${info.contactEmail}` : ''}. Agreeing is voluntary, but we can't book an interview without it.
+              {t.privacy(info.contactEmail)}
             </Text>
           </Collapse>
           <Button type="submit" loading={book.isPending}>
-            Book this time
+            {t.book}
           </Button>
         </Stack>
       </form>
