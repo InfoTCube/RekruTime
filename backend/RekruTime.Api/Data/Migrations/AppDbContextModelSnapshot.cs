@@ -349,6 +349,11 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<string>("Label")
                         .HasColumnType("text");
 
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
                     b.Property<int?>("RecruitId")
                         .HasColumnType("integer");
 
@@ -421,6 +426,27 @@ namespace RekruTime.Api.Data.Migrations
                     b.HasIndex("Status", "NextAttemptAt");
 
                     b.ToTable("EmailMessages");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.EmailTemplate", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Language")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Key", "Language");
+
+                    b.ToTable("EmailTemplates");
                 });
 
             modelBuilder.Entity("RekruTime.Api.Data.Interview", b =>

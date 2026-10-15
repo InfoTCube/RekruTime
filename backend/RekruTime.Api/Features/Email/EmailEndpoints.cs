@@ -6,6 +6,10 @@ using RekruTime.Api.Data;
 namespace RekruTime.Api.Features.Email;
 
 public record EmailSettingsDto(bool Configured, string? Host, int Port, string? FromAddress, string FromName, string? ReplyTo);
+public record TemplateDto(string Key, string Language, string Subject, string Body, bool IsDefault);
+public record TemplateRequest(
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(200)] string Subject,
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(10000)] string Body);
 public record EmailMessageDto(int Id, string To, string Subject, EmailStatus Status, int Attempts, string? LastError, DateTime CreatedAt, DateTime? SentAt);
 
 public static class EmailEndpoints
@@ -33,6 +37,44 @@ public static class EmailEndpoints
             {
                 return Results.Problem($"Sending failed: {e.Message}", statusCode: 502);
             }
+        });
+
+        // Invitation template per language; built-in default until an admin saves their own version.
+        group.MapGet("/templates", async (AppDbContext db) =>
+        {
+            var custom = await db.EmailTemplates.Where(t => t.Key == Invitations.Key).ToDictionaryAsync(t => t.Language);
+            return Invitations.Defaults.Select(d => custom.TryGetValue(d.Key, out var c)
+                ? new TemplateDto(Invitations.Key, d.Key, c.Subject, c.Body, false)
+                : new TemplateDto(Invitations.Key, d.Key, d.Value.Subject, d.Value.Body, true));
+        });
+
+        group.MapPut("/templates/{language}", async (string language, TemplateRequest req, AppDbContext db) =>
+        {
+            if (!Invitations.Defaults.ContainsKey(language)) return Results.NotFound();
+            if (!req.Body.Contains("{link}"))
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["Body"] = ["The text must contain {link} – otherwise the recruit can't book."] });
+            var t = await db.EmailTemplates.FindAsync(Invitations.Key, language);
+            if (t is null) db.EmailTemplates.Add(t = new EmailTemplate { Key = Invitations.Key, Language = language, Subject = "", Body = "" });
+            (t.Subject, t.Body) = (req.Subject.Trim(), req.Body.Trim());
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+
+        group.MapDelete("/templates/{language}", async (string language, AppDbContext db) =>
+        {
+            await db.EmailTemplates.Where(t => t.Key == Invitations.Key && t.Language == language).ExecuteDeleteAsync();
+            return Results.NoContent(); // back to the built-in default
+        });
+
+        // Unsaved text filled with sample values – exactly what a recruit would get.
+        group.MapPost("/templates/{language}/preview", async (string language, TemplateRequest req, AppDbContext db, IConfiguration config) =>
+        {
+            if (!Invitations.Defaults.ContainsKey(language)) return Results.NotFound();
+            var period = await db.RecruitmentSettings.FindAsync(1);
+            var sections = await db.Sections.OrderBy(s => s.Name).Select(s => s.Name).Take(2).ToListAsync();
+            return Results.Ok(Invitations.Render(new Template(req.Subject, req.Body), new InvitationValues(
+                "Jan Kowalski", $"{(config["Club:PublicUrl"] ?? "").TrimEnd('/')}/book/AbCdEfGhIjKlMnOpQrStUv",
+                sections.Count > 0 ? sections : ["AI"], period?.InterviewsTo, config["Club:ContactEmail"]), language));
         });
 
         group.MapGet("/messages", async (EmailStatus? status, AppDbContext db) =>
