@@ -258,6 +258,7 @@ function Booking({ info, base }: { info: LinkInfo; base: string }) {
                     variant={active ? 'filled' : 'default'}
                     h="auto"
                     w={64}
+                    style={{ flexShrink: 0 }} // keep tiles readable – the row scrolls instead
                     py={8}
                     px={0}
                     onClick={() => {
@@ -363,7 +364,7 @@ function BookingForm({ info, base, slot, onConflict }: { info: LinkInfo; base: s
       >
         <Stack>
           <Text fw={600} ff="heading" fz="lg">
-            {f.longDay(slot.start)}, {f.time(slot.start)}–{f.time(slot.end)}
+            {f.longDay(slot.start)}, <span style={{ whiteSpace: 'nowrap' }}>{f.time(slot.start)}–{f.time(slot.end)}</span>
           </Text>
           {conflict && <Alert color="orange">{t.taken}</Alert>}
           {book.isError && !conflict && !fieldProblem && <Alert color="red">{t.somethingWrong}</Alert>}
