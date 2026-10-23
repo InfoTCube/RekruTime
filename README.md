@@ -87,6 +87,7 @@ Postgres runs on **5440** on purpose, so it doesn't clash with a locally install
 ```bash
 cd backend && dotnet test        # needs Docker running (Testcontainers)
 cd frontend && npm run build && npm run lint && npm test
+docker compose up -d && cd e2e && npm ci && npx playwright test   # browser tests (uses your installed Chrome)
 ```
 
 Unit tests cover the pure logic (slot algorithm, voting rules, e-mail texts, calendar files). Integration tests run the
@@ -94,6 +95,12 @@ real API against Postgres: one container per run, a fresh database per test (`Re
 in a `Testing` environment so local dev settings never leak in. They cover every feature end to end through HTTP,
 concurrent bookings, the e-mail outbox against a real SMTP server (Mailpit), and an authorization matrix that checks every
 endpoint for anonymous / recruiter / section leader / admin – a new endpoint fails it until it gets a row.
+
+Browser tests (`e2e/`, Playwright) click through the whole recruitment like the club would: import → invitation e-mail →
+booking from the link on a phone → interviewer's note → leader + admin votes → decision e-mail, plus the invite/set-password
+flow, who sees which pages, and the booking page in English. `e2e/server.mjs` starts the built app on port 5090 with its own,
+freshly emptied database (`rekrutime_e2e`) on the docker-compose Postgres and reads e-mails from Mailpit – your dev data
+and a running dev API are left alone.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs both on every pull request.
 
