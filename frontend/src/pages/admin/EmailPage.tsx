@@ -33,7 +33,7 @@ export function EmailPage() {
 
   return (
     <Stack>
-      <PageHeader title="E-mail" description="Invitations go out through the SMTP server set on the server. Edit the texts below; recent e-mails and their status are at the bottom." />
+      <PageHeader title="E-mail" description="Invitations and decision e-mails go out through the SMTP server set on the server. Edit the texts below; recent e-mails and their status are at the bottom." />
 
       <Paper withBorder p="md">
         {settings.isPending && <Skeleton height={60} />}

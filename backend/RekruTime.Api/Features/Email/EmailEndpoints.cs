@@ -19,18 +19,20 @@ public static class EmailEndpoints
 
         group.MapPost("/messages/{id:int}/retry", async (int id, EmailService s) => (await s.RetryAsync(id)).ToHttp());
 
-        group.MapGet("/templates", (InvitationService s) => s.ListTemplatesAsync());
+        group.MapGet("/templates", (TemplateService s) => s.ListAsync());
 
-        group.MapPut("/templates/{language}", async (string language, TemplateRequest req, InvitationService s) =>
-            (await s.SaveTemplateAsync(language, req)).ToHttp());
+        group.MapPut("/templates/{key}/{language}", async (string key, string language, TemplateRequest req, TemplateService s) =>
+            (await s.SaveAsync(key, language, req)).ToHttp());
 
-        group.MapDelete("/templates/{language}", async (string language, InvitationService s) =>
+        group.MapDelete("/templates/{key}/{language}", async (string key, string language, TemplateService s) =>
         {
-            await s.ResetTemplateAsync(language);
+            await s.ResetAsync(key, language);
             return Results.NoContent(); // back to the built-in default
         });
 
-        group.MapPost("/templates/{language}/preview", async (string language, TemplateRequest req, InvitationService s) =>
-            (await s.PreviewAsync(language, req)).ToHttp());
+        group.MapPost("/templates/{key}/{language}/preview", async (string key, string language, TemplateRequest req, TemplateService s) =>
+            (await s.PreviewAsync(key, language, req)).ToHttp());
+
+        group.MapPost("/decisions", async (SendDecisionsRequest req, DecisionService s) => (await s.SendAsync(req)).ToHttp());
     }
 }

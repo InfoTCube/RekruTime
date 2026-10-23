@@ -10,4 +10,5 @@ public class Application
     public Section Section { get; set; } = null!;
     public ApplicationStatus Status { get; set; } = ApplicationStatus.Pending;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? DecisionSentAt { get; set; } // decision e-mail queued → votes locked
 }

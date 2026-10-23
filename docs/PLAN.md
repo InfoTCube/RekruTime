@@ -257,7 +257,7 @@ Same visibility as notes: interviewers, leaders of the interview's sections, adm
 | Booking created | (Later) self-cancel/reschedule link – out of MVP scope, decide when mailing lands |
 | Admin cancels/reschedules | Update to recruit + interviewers |
 | Day before (optional) | Reminder |
-| Admin clicks "Send decision" | Accepted / rejected email – **manual trigger**, never automatic on vote |
+| Admin clicks "Send decision" (#36) | Accepted / rejected email – **manual trigger**, never automatic on vote. One per recruit once all their applications are decided: "accepted" (listing accepted sections) if any, else "rejected". Sending locks the votes. Templates `accepted`/`rejected` per language, editable like the invitation |
 | User created | Account invite with set-password link (replaces temp passwords) |
 
 ---

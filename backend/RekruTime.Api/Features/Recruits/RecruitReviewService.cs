@@ -6,7 +6,7 @@ using RekruTime.Api.Features.Interviews;
 
 namespace RekruTime.Api.Features.Recruits;
 
-public record ApplicationReviewDto(int Id, int SectionId, string SectionName, ApplicationStatus Status, List<VoteDto> Votes, bool CanVote, bool CanDecide);
+public record ApplicationReviewDto(int Id, int SectionId, string SectionName, ApplicationStatus Status, List<VoteDto> Votes, bool CanVote, bool CanDecide, DateTime? DecisionSentAt);
 public record InterviewSummaryDto(int Id, DateTime Start, InterviewStatus Status, List<string> Interviewers);
 public record RecruitRowDto(int Id, string FullName, string Email, List<ApplicationReviewDto> Applications, InterviewSummaryDto? Interview);
 public record InterviewWithNotesDto(InterviewDto Interview, NotesDto Notes);
@@ -71,7 +71,7 @@ public class RecruitReviewService(AppDbContext db, InterviewService interviews, 
         var rows = await q.OrderBy(a => a.Section.Name)
             .Select(a => new
             {
-                a.RecruitId, a.Id, a.SectionId, SectionName = a.Section.Name, a.Status,
+                a.RecruitId, a.Id, a.SectionId, SectionName = a.Section.Name, a.Status, a.DecisionSentAt,
                 Votes = db.ApplicationVotes.Where(v => v.ApplicationId == a.Id).OrderBy(v => v.CreatedAt)
                     .Select(v => new VoteDto(v.UserId, v.User.DisplayName, v.Decision, v.IsFinal, v.Comment, v.CreatedAt)).ToList(),
             })
@@ -79,10 +79,10 @@ public class RecruitReviewService(AppDbContext db, InterviewService interviews, 
         // Mirrors VoteService's checks so the UI only offers what will succeed.
         return rows.Select(a =>
         {
-            var decided = a.Votes.Any(v => v.IsFinal);
+            var decided = a.Votes.Any(v => v.IsFinal) || a.DecisionSentAt != null; // decision e-mail sent → locked
             var canVote = !decided && (me.IsAdmin || led!.Contains(a.SectionId));
             var canDecide = !decided && me.IsAdmin && a.Status == ApplicationStatus.Disputed && a.Votes.All(v => v.UserId != me.UserId);
-            return (a.RecruitId, new ApplicationReviewDto(a.Id, a.SectionId, a.SectionName, a.Status, a.Votes, canVote, canDecide));
+            return (a.RecruitId, new ApplicationReviewDto(a.Id, a.SectionId, a.SectionName, a.Status, a.Votes, canVote, canDecide, a.DecisionSentAt));
         }).ToList();
     }
 }

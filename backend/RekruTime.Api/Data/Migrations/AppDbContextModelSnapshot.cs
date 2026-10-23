@@ -281,6 +281,9 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DecisionSentAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("RecruitId")
                         .HasColumnType("integer");
 
@@ -446,6 +449,9 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<DateTime>("NextAttemptAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("RecruitId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("SentAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -467,6 +473,8 @@ namespace RekruTime.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BookingLinkId");
+
+                    b.HasIndex("RecruitId");
 
                     b.HasIndex("Status", "NextAttemptAt");
 
@@ -836,6 +844,11 @@ namespace RekruTime.Api.Data.Migrations
                     b.HasOne("RekruTime.Api.Data.BookingLink", null)
                         .WithMany()
                         .HasForeignKey("BookingLinkId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("RekruTime.Api.Data.Recruit", null)
+                        .WithMany()
+                        .HasForeignKey("RecruitId")
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
