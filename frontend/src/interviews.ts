@@ -14,7 +14,11 @@ export type Interview = {
   interviewers: { id: string; name: string }[]
 }
 
+export type Note = { authorId: string | null; authorName: string; text: string; updatedAt: string }
+export type Notes = { canWrite: boolean; notes: Note[] }
+
 export const interviewsKey = ['interviews']
+export const notesKey = (id: number) => [...interviewsKey, id, 'notes']
 
 export const useInterviews = (params: Record<string, string | undefined>, enabled = true) => {
   const search = new URLSearchParams(Object.entries(params).filter((e): e is [string, string] => !!e[1]))
