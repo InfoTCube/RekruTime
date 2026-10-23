@@ -153,6 +153,6 @@ public class BookingEmailTests() : IntegrationTest(new Dictionary<string, string
         // GDPR delete removes every e-mail about the recruit
         var recruitId = mails[0].RecruitId!.Value;
         Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync($"/api/recruits/{recruitId}")).StatusCode);
-        Assert.DoesNotContain(await App.MailsAsync(), m => m.RecruitId == recruitId || m.Body.Contains("Ewa"));
+        Assert.DoesNotContain(await App.MailsAsync(), m => m.RecruitId == recruitId || m.To == "ewa@x.pl"); // not Body.Contains("Ewa") – random invite tokens can contain that
     }
 }
