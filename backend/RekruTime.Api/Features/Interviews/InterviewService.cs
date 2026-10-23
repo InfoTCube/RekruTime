@@ -72,6 +72,9 @@ public class InterviewService(AppDbContext db, BookingEmailService emails)
             (interview.End, interview.BlockedUntil) = (interview.Start + length, interview.Start + blocked);
         }
         if (req.Status is { } status) interview.Status = status;
+        // New time or back from cancelled → a new reminder (unless the e-mail about it is already inside the last day).
+        if (interview.Start != oldStart || (oldStatus == InterviewStatus.Cancelled && interview.Status == InterviewStatus.Scheduled))
+            ReminderJob.Reset(interview, DateTime.UtcNow);
 
         try
         {

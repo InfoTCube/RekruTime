@@ -13,6 +13,7 @@ public class Interview
     public DateTime BlockedUntil { get; set; } // End + buffer; the room is taken until then
     public InterviewStatus Status { get; set; } = InterviewStatus.Scheduled;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? ReminderSentAt { get; set; } // ReminderJob; reset when the time changes
     public List<Section> Sections { get; set; } = [];
     public List<AppUser> Interviewers { get; set; } = [];
 }

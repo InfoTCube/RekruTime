@@ -528,6 +528,9 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<int>("RecruitId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("ReminderSentAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("Start")
                         .HasColumnType("timestamp with time zone");
 
@@ -630,6 +633,9 @@ namespace RekruTime.Api.Data.Migrations
 
                     b.Property<DateOnly?>("InterviewsTo")
                         .HasColumnType("date");
+
+                    b.Property<bool>("RemindersEnabled")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
