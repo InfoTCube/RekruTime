@@ -6,7 +6,7 @@ export type Me = {
   email: string
   displayName: string
   roles: string[]
-  sections: { id: number; name: string }[]
+  sections: { id: number; name: string; isLeader: boolean }[]
   mustChangePassword: boolean // logged in with a temporary password from an admin
 }
 

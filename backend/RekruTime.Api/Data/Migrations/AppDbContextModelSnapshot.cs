@@ -597,6 +597,9 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<int>("SectionId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsLeader")
+                        .HasColumnType("boolean");
+
                     b.HasKey("UserId", "SectionId");
 
                     b.HasIndex("SectionId");

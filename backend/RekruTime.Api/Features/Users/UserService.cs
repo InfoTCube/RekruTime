@@ -11,12 +11,15 @@ public record UserRequest(
     [Required, EmailAddress, StringLength(256)] string Email,
     [Required, StringLength(100, MinimumLength = 1)] string DisplayName,
     [Required] string Role,
-    int[]? SectionIds = null)
+    int[]? SectionIds = null,
+    int[]? LeaderSectionIds = null)
 {
     public int[] Sections => (SectionIds ?? []).Distinct().ToArray();
+    // Only sections the user is in can be led.
+    public bool Leads(int sectionId) => LeaderSectionIds?.Contains(sectionId) == true;
 }
 
-public record UserDto(string Id, string Email, string DisplayName, string Role, int[] SectionIds);
+public record UserDto(string Id, string Email, string DisplayName, string Role, int[] SectionIds, int[] LeaderSectionIds);
 public record CreatedUserDto(UserDto User, string TemporaryPassword);
 public record PasswordDto(string TemporaryPassword);
 
@@ -31,9 +34,10 @@ public class UserService(AppDbContext db, UserManager<AppUser> users)
                 u.Id, u.Email, u.DisplayName,
                 Role = db.UserRoles.Where(ur => ur.UserId == u.Id).Join(db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name).FirstOrDefault(),
                 SectionIds = u.Sections.Select(s => s.SectionId).ToArray(),
+                LeaderSectionIds = u.Sections.Where(s => s.IsLeader).Select(s => s.SectionId).ToArray(),
             })
             .ToListAsync();
-        return list.Select(u => new UserDto(u.Id, u.Email!, u.DisplayName, u.Role ?? "", u.SectionIds)).ToList();
+        return list.Select(u => new UserDto(u.Id, u.Email!, u.DisplayName, u.Role ?? "", u.SectionIds, u.LeaderSectionIds)).ToList();
     }
 
     public async Task<Result<CreatedUserDto>> CreateAsync(UserRequest req)
@@ -47,11 +51,11 @@ public class UserService(AppDbContext db, UserManager<AppUser> users)
         var result = await users.CreateAsync(user, password);
         if (!result.Succeeded) return IdentityError(result);
         await users.AddToRoleAsync(user, req.Role);
-        db.UserSections.AddRange(req.Sections.Select(id => new UserSection { UserId = user.Id, SectionId = id }));
+        db.UserSections.AddRange(req.Sections.Select(id => new UserSection { UserId = user.Id, SectionId = id, IsLeader = req.Leads(id) }));
         await db.SaveChangesAsync();
         await tx.CommitAsync();
 
-        return new CreatedUserDto(new UserDto(user.Id, email, user.DisplayName, req.Role, req.Sections), password);
+        return new CreatedUserDto(new UserDto(user.Id, email, user.DisplayName, req.Role, req.Sections, req.Sections.Where(req.Leads).ToArray()), password);
     }
 
     public async Task<Result<UserDto>> UpdateAsync(string id, UserRequest req, string actingUserId)
@@ -79,10 +83,12 @@ public class UserService(AppDbContext db, UserManager<AppUser> users)
         user.Sections.RemoveAll(s => !req.Sections.Contains(s.SectionId));
         user.Sections.AddRange(req.Sections.Where(sid => user.Sections.All(s => s.SectionId != sid))
             .Select(sid => new UserSection { UserId = id, SectionId = sid }));
+        foreach (var s in user.Sections) s.IsLeader = req.Leads(s.SectionId);
         await db.SaveChangesAsync();
         await tx.CommitAsync();
 
-        return new UserDto(id, email, user.DisplayName, req.Role, user.Sections.Select(s => s.SectionId).ToArray());
+        return new UserDto(id, email, user.DisplayName, req.Role, user.Sections.Select(s => s.SectionId).ToArray(),
+            user.Sections.Where(s => s.IsLeader).Select(s => s.SectionId).ToArray());
     }
 
     public async Task<Result<PasswordDto>> ResetPasswordAsync(string id)
