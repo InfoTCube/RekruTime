@@ -231,6 +231,13 @@ Field types: text, textarea, email, phone, single choice, multi choice, **sectio
 
 Reuses the MVP booking flow and link model unchanged – links are already individual.
 
+### Interview prep: answers + suggested questions (#93)
+The interview page (and recruit detail) shows all of the recruit's form answers next to **suggested questions**:
+- per section – a question list admins/section leaders maintain, shown for the interview's sections
+- per form field (optional) – a follow-up question set in the form builder, shown under the recruit's answer
+
+Same visibility as notes: interviewers, leaders of the interview's sections, admins.
+
 ---
 
 ## 4. Mailing
@@ -278,4 +285,5 @@ Reuses the MVP booking flow and link model unchanged – links are already indiv
 
 ## Future (not planned in detail)
 
+- **Telemetry (#92)**: OpenTelemetry in the API (requests, EF, e-mail sender) to a self-hosted dashboard or an error tracker, frontend error reporting, a health check with alerting, simple usage counters. No recruit personal data in telemetry.
 - **Multiple rooms + online interviews**: add `Room` (incl. an "Online" kind with unlimited capacity), `Interview.RoomId`, and change the exclusion constraint to `EXCLUDE USING gist ("RoomId" WITH =, tstzrange(...) WITH &&)`. Then interviewers need their own no-overlap check (today the single room guarantees it). Slot calc picks any free room. Kept out now – one room makes everything simpler.
