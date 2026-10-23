@@ -267,7 +267,7 @@ Same visibility as notes: interviewers, leaders of the interview's sections, adm
 - **GDPR**: consent checkbox on booking/form, privacy note, admin "delete recruit" (cascades), purge recruits after recruitment ends (manual action is enough at first)
 - **Security**: public endpoints rate-limited; tokens random; recruiters only see their own interviews / notes they're allowed to; validate all public input
 - **Audit**: `CreatedAt/By` on interviews, votes, links – enough; no separate audit log
-- **Tests**: `SlotCalculator` unit tests + one integration test for concurrent booking (Testcontainers Postgres). Skip the rest until something breaks.
+- **Tests**: unit tests for pure logic; integration tests through HTTP against real Postgres (shared container, DB per test, `Testing` env) for every feature + an authorization matrix over all endpoints (#97); CI on every PR. Browser E2E: #98.
 
 ## Decisions log
 

@@ -1,60 +1,39 @@
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using RekruTime.Api.Data;
 using RekruTime.Api.Features.Booking;
-using Testcontainers.PostgreSql;
 
 namespace RekruTime.Tests;
 
-// ImportService against a real Postgres (needs Docker): merging, validation, "already invited", idempotent re-import.
-public class ImportServiceTests : IAsyncLifetime
+// ImportService against a real Postgres: merging, validation, "already invited", idempotent re-import.
+public class ImportServiceTests : IntegrationTest
 {
-    readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:17").Build();
-    WebApplicationFactory<Program> _app = null!;
-
-    public async Task InitializeAsync()
-    {
-        await _db.StartAsync();
-        _app = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
-            .UseSetting("ConnectionStrings:Default", _db.GetConnectionString())
-            .UseSetting("SeedAdmin:Email", "admin@test.local")
-            .UseSetting("SeedAdmin:Password", "Admin123!"));
-        _ = _app.Server; // migrations + seed
-    }
-
-    public async Task DisposeAsync()
-    {
-        await _app.DisposeAsync();
-        await _db.DisposeAsync();
-    }
-
     [Fact]
     public async Task Merges_rows_validates_and_skips_people_already_invited()
     {
-        using var scope = _app.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var ai = new Section { Name = "AI" };
-        var web = new Section { Name = "Web" };
-        db.Sections.AddRange(ai, web);
-        // Kasia already has a working link.
-        db.BookingLinks.Add(new BookingLink { Token = "existing", Recruit = new Recruit { FullName = "Kasia", Email = "kasia@x.pl" }, Sections = [ai] });
-        await db.SaveChangesAsync();
-        var import = scope.ServiceProvider.GetRequiredService<ImportService>();
-        var adminId = await db.Users.Where(u => u.Email == "admin@test.local").Select(u => u.Id).SingleAsync();
+        var (ai, web, adminId) = await App.DbAsync(async db =>
+        {
+            Section a = new() { Name = "AI" }, w = new() { Name = "Web" };
+            db.Sections.AddRange(a, w);
+            // Kasia already has a working link.
+            db.BookingLinks.Add(new BookingLink { Token = "existing", Recruit = new Recruit { FullName = "Kasia", Email = "kasia@x.pl" }, Sections = [a] });
+            await db.SaveChangesAsync();
+            return (a.Id, w.Id, await db.Users.Where(u => u.Email == TestApp.AdminEmail).Select(u => u.Id).SingleAsync());
+        });
 
         ImportRow[] rows =
         [
-            new(2, "Zofia Nowak", " Zofia@X.pl", [ai.Id], null),
-            new(3, "Zofia Nowak", "zofia@x.pl", [web.Id], null),        // same person, second section → merged
-            new(4, "Lucas", "lucas@x.pl", [ai.Id], "EN"),
-            new(5, "Bad", "nope", [ai.Id], null),
+            new(2, "Zofia Nowak", " Zofia@X.pl", [ai], null),
+            new(3, "Zofia Nowak", "zofia@x.pl", [web], null),        // same person, second section → merged
+            new(4, "Lucas", "lucas@x.pl", [ai], "EN"),
+            new(5, "Bad", "nope", [ai], null),
             new(6, "No section", "nosec@x.pl", [], null),
-            new(7, "Kasia", "kasia@x.pl", [ai.Id], null),
+            new(7, "Kasia", "kasia@x.pl", [ai], null),
         ];
+        Task<ImportResult> Import(bool dryRun) =>
+            App.UseAsync<ImportService, ImportResult>(async s => (await s.ImportAsync(new ImportRequest(rows, null, dryRun, SendEmails: false), adminId)).Value!);
 
-        var preview = (await import.ImportAsync(new ImportRequest(rows, null, DryRun: true, SendEmails: false), adminId)).Value!;
-        Assert.Equal(0, await db.BookingLinks.CountAsync(l => l.Token != "existing")); // dry run saves nothing
+        var preview = await Import(dryRun: true);
+        Assert.Equal(0, await App.DbAsync(db => db.BookingLinks.CountAsync(l => l.Token != "existing"))); // dry run saves nothing
         Assert.Equal(
             [("zofia@x.pl", ImportStatus.New), ("lucas@x.pl", ImportStatus.New), ("nope", ImportStatus.Error), ("nosec@x.pl", ImportStatus.Error), ("kasia@x.pl", ImportStatus.AlreadyInvited)],
             preview.Rows.Select(r => (r.Email, r.Status)));
@@ -63,12 +42,10 @@ public class ImportServiceTests : IAsyncLifetime
         Assert.Equal(["AI", "Web"], zofia.Sections);
         Assert.Equal("en", preview.Rows[1].Language);
 
-        var done = (await import.ImportAsync(new ImportRequest(rows, null, DryRun: false, SendEmails: false), adminId)).Value!;
-        Assert.Equal(2, done.Created);
-        var zofiaLink = await db.BookingLinks.Include(l => l.Sections).SingleAsync(l => l.Recruit!.Email == "zofia@x.pl");
-        Assert.Equal(["AI", "Web"], zofiaLink.Sections.Select(s => s.Name).Order());
+        Assert.Equal(2, (await Import(dryRun: false)).Created);
+        var zofiaSections = await App.DbAsync(db => db.BookingLinks.Where(l => l.Recruit!.Email == "zofia@x.pl").SelectMany(l => l.Sections).Select(s => s.Name).OrderBy(n => n).ToListAsync());
+        Assert.Equal(["AI", "Web"], zofiaSections);
 
-        var again = (await import.ImportAsync(new ImportRequest(rows, null, DryRun: false, SendEmails: false), adminId)).Value!;
-        Assert.Equal(0, again.Created); // re-importing the same file creates nothing
+        Assert.Equal(0, (await Import(dryRun: false)).Created); // re-importing the same file creates nothing
     }
 }

@@ -89,7 +89,13 @@ cd backend && dotnet test        # needs Docker running (Testcontainers)
 cd frontend && npm run build && npm run lint && npm test
 ```
 
-The backend tests cover the slot algorithm, concurrent bookings of the same slot, the e-mail outbox against a real SMTP server, imports and invitation rendering.
+Unit tests cover the pure logic (slot algorithm, voting rules, e-mail texts, calendar files). Integration tests run the
+real API against Postgres: one container per run, a fresh database per test (`RekruTime.Tests/Infrastructure/TestApp.cs`),
+in a `Testing` environment so local dev settings never leak in. They cover every feature end to end through HTTP,
+concurrent bookings, the e-mail outbox against a real SMTP server (Mailpit), and an authorization matrix that checks every
+endpoint for anonymous / recruiter / section leader / admin – a new endpoint fails it until it gets a row.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs both on every pull request.
 
 ### Database migrations
 

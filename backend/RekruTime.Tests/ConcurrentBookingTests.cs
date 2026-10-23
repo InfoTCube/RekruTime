@@ -1,39 +1,18 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Testcontainers.PostgreSql;
+using static RekruTime.Tests.TestApp;
 
 namespace RekruTime.Tests;
 
-// The real app against a throwaway Postgres (needs Docker): the DB constraints are what stop double bookings.
-public class ConcurrentBookingTests : IAsyncLifetime
+// The DB constraints are what stop double bookings – checked against the real app and Postgres.
+public class ConcurrentBookingTests : IntegrationTest
 {
-    readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:17").Build();
-    WebApplicationFactory<Program> _app = null!;
-
-    public async Task InitializeAsync()
-    {
-        await _db.StartAsync();
-        _app = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
-            .UseSetting("ConnectionStrings:Default", _db.GetConnectionString())
-            .UseSetting("SeedAdmin:Email", "admin@test.local")
-            .UseSetting("SeedAdmin:Password", "Admin123!")
-            .UseSetting("Email:Host", "")); // no e-mail (overrides appsettings.Development) → temporary passwords
-    }
-
-    public async Task DisposeAsync()
-    {
-        await _app.DisposeAsync();
-        await _db.DisposeAsync();
-    }
-
     [Fact]
     public async Task Same_slot_booked_by_two_recruits_at_once_only_one_wins()
     {
-        var (links, start) = await Setup(linkCount: 2);
+        var (links, start) = await Booking.SetupAsync(App, linkCount: 2);
 
-        var results = await Task.WhenAll(links.Select((token, n) => Book(token, start, $"r{n}@test.local")));
+        var results = await Task.WhenAll(links.Select((token, n) => Booking.BookAsync(App, token, start, $"r{n}@test.local")));
 
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.Conflict], results.Order());
     }
@@ -41,11 +20,10 @@ public class ConcurrentBookingTests : IAsyncLifetime
     [Fact]
     public async Task Same_link_used_twice_at_once_books_only_one_interview()
     {
-        var (links, start) = await Setup(linkCount: 1);
-        var slots = await Slots(links[0]);
-        var later = slots.First(s => s >= start.AddHours(1)); // a different, non-overlapping time
+        var (links, start) = await Booking.SetupAsync(App, linkCount: 1);
+        var later = (await Booking.SlotsAsync(App, links[0])).First(s => s >= start.AddHours(1)); // a different, non-overlapping time
 
-        var results = await Task.WhenAll(Book(links[0], start, "a@test.local"), Book(links[0], later, "a@test.local"));
+        var results = await Task.WhenAll(Booking.BookAsync(App, links[0], start, "a@test.local"), Booking.BookAsync(App, links[0], later, "a@test.local"));
 
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.Conflict], results.Order());
     }
@@ -53,55 +31,56 @@ public class ConcurrentBookingTests : IAsyncLifetime
     [Fact]
     public async Task Interview_marked_done_early_still_blocks_its_time()
     {
-        var (links, start) = await Setup(linkCount: 2);
-        Assert.Equal(HttpStatusCode.OK, await Book(links[0], start, "a@test.local"));
+        var (links, start) = await Booking.SetupAsync(App, linkCount: 2, buffer: 10);
+        Assert.Equal(HttpStatusCode.OK, await Booking.BookAsync(App, links[0], start, "a@test.local"));
 
-        var admin = _app.CreateClient();
-        await Ok(admin.PostAsJsonAsync("/api/auth/login", new { email = "admin@test.local", password = "Admin123!" }));
+        var admin = await App.AdminAsync();
         var interview = (await Json(admin.GetAsync("/api/interviews"))).EnumerateArray().Single();
-        await Ok(admin.PatchAsJsonAsync($"/api/interviews/{interview.GetProperty("id").GetInt32()}", new { status = "Done" }));
+        await Json(admin.PatchAsJsonAsync($"/api/interviews/{interview.GetProperty("id").GetInt32()}", new { status = "Done" }));
 
         // The DB keeps the room blocked for Done interviews – the slot list must agree, or booking it always fails with 409.
         var blockedUntil = start.AddMinutes(40); // 30 min + 10 min buffer
-        Assert.DoesNotContain(await Slots(links[1]), s => s < blockedUntil && s.AddMinutes(40) > start);
+        Assert.DoesNotContain(await Booking.SlotsAsync(App, links[1]), s => s < blockedUntil && s.AddMinutes(40) > start);
+    }
+}
+
+// A bookable setup through the API: section, two recruiters free 10:00–14:00 UTC three days from now
+// (beyond the 12 h notice), the recruitment period around it, N anonymous links.
+public static class Booking
+{
+    public record Setup(List<string> Links, DateTime FirstSlot, int SectionId, HttpClient Admin, TestApp.User[] Recruiters);
+
+    public static async Task<(List<string> Links, DateTime FirstSlot)> SetupAsync(TestApp app, int linkCount, int buffer = 0)
+    {
+        var s = await FullSetupAsync(app, linkCount, buffer);
+        return (s.Links, s.FirstSlot);
     }
 
-    // Section + 2 recruiters free on a day 3 days from now (beyond the 12 h notice), recruitment period around it, N links.
-    async Task<(List<string> Links, DateTime FirstSlot)> Setup(int linkCount)
+    public static async Task<Setup> FullSetupAsync(TestApp app, int linkCount, int buffer = 0, string[]? names = null)
     {
-        var admin = _app.CreateClient();
-        await Ok(admin.PostAsJsonAsync("/api/auth/login", new { email = "admin@test.local", password = "Admin123!" }));
-        var section = await Json(admin.PostAsJsonAsync("/api/sections", new { name = "AI", interviewDurationMinutes = 30, bufferMinutes = 10 }));
+        var admin = await app.AdminAsync();
+        var section = await app.SectionAsync(admin, "AI", buffer: buffer);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        await Ok(admin.PutAsJsonAsync("/api/settings/recruitment", new { interviewsFrom = today, interviewsTo = today.AddDays(10) }));
+        await app.SetPeriodAsync(admin, today, today.AddDays(10));
 
         var day = DateTime.UtcNow.Date.AddDays(3);
-        foreach (var name in new[] { "a", "b" })
+        var recruiters = new List<TestApp.User>();
+        foreach (var name in names ?? ["Ala", "Ola"])
         {
-            var user = await Json(admin.PostAsJsonAsync("/api/users", new { email = $"{name}@club.local", displayName = name, role = "Recruiter", sectionIds = new[] { section.GetProperty("id").GetInt32() } }));
-            var recruiter = _app.CreateClient();
-            await Ok(recruiter.PostAsJsonAsync("/api/auth/login", new { email = $"{name}@club.local", password = user.GetProperty("temporaryPassword").GetString() }));
-            await Ok(recruiter.PostAsJsonAsync("/api/availability", new { start = day.AddHours(10), end = day.AddHours(14) }));
+            var user = await app.UserAsync(admin, name, [section]);
+            await Json(user.Client.PostAsJsonAsync("/api/availability", new { start = day.AddHours(10), end = day.AddHours(14) }));
+            recruiters.Add(user);
         }
 
-        var links = await Json(admin.PostAsJsonAsync("/api/booking-links", new { sectionIds = new[] { section.GetProperty("id").GetInt32() }, count = linkCount }));
+        var links = await Json(admin.PostAsJsonAsync("/api/booking-links", new { sectionIds = new[] { section }, count = linkCount }));
         var tokens = links.EnumerateArray().Select(l => l.GetProperty("token").GetString()!).ToList();
-        return (tokens, (await Slots(tokens[0])).First());
+        return new(tokens, (await SlotsAsync(app, tokens[0])).First(), section, admin, [.. recruiters]);
     }
 
-    async Task<List<DateTime>> Slots(string token) =>
-        (await Json(_app.CreateClient().GetAsync($"/api/public/links/{token}/slots"))).EnumerateArray()
+    public static async Task<List<DateTime>> SlotsAsync(TestApp app, string token) =>
+        (await Json(app.CreateClient().GetAsync($"/api/public/links/{token}/slots"))).EnumerateArray()
             .Select(s => s.GetProperty("start").GetDateTime().ToUniversalTime()).ToList();
 
-    async Task<HttpStatusCode> Book(string token, DateTime start, string email) =>
-        (await _app.CreateClient().PostAsJsonAsync($"/api/public/links/{token}/bookings",
-            new { start, fullName = "Test Recruit", email, gdprConsent = true })).StatusCode;
-
-    static async Task Ok(Task<HttpResponseMessage> call) => (await call).EnsureSuccessStatusCode();
-
-    static async Task<JsonElement> Json(Task<HttpResponseMessage> call)
-    {
-        var res = (await call).EnsureSuccessStatusCode();
-        return await res.Content.ReadFromJsonAsync<JsonElement>();
-    }
+    public static async Task<HttpStatusCode> BookAsync(TestApp app, string token, DateTime start, string email, string name = "Test Recruit", bool consent = true) =>
+        (await app.CreateClient().PostAsJsonAsync($"/api/public/links/{token}/bookings", new { start, fullName = name, email, gdprConsent = consent })).StatusCode;
 }
