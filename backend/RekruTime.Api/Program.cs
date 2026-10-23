@@ -37,6 +37,7 @@ builder.Services.AddScoped<BookingLinkService>();
 builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<PublicBookingService>();
 builder.Services.AddScoped<InterviewService>();
+builder.Services.AddScoped<NoteService>();
 builder.Services.AddScoped<RecruitService>();
 builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<EmailService>();

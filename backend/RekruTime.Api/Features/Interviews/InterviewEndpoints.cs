@@ -15,5 +15,11 @@ public static class InterviewEndpoints
 
         group.MapPatch("/{id:int}", async (int id, UpdateInterviewRequest req, InterviewService s) =>
             (await s.UpdateAsync(id, req)).ToHttp()).RequireAuthorization(Roles.Admin);
+
+        group.MapGet("/{id:int}/notes", async (int id, ClaimsPrincipal me, NoteService s) =>
+            (await s.ListAsync(id, me.Id(), me.IsInRole(Roles.Admin))).ToHttp());
+
+        group.MapPut("/{id:int}/notes", async (int id, NoteRequest req, ClaimsPrincipal me, NoteService s) =>
+            (await s.SaveAsync(id, me.Id(), req)).ToHttp(note => note is null ? Results.NoContent() : Results.Ok(note))); // 204 = deleted (blank text)
     }
 }

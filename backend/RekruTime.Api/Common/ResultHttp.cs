@@ -18,6 +18,7 @@ public static class ResultHttp
         ErrorType.Gone => Results.Problem(e.Message, statusCode: 410),
         ErrorType.BadGateway => Results.Problem(e.Message, statusCode: 502),
         ErrorType.Unauthorized => Results.Unauthorized(),
+        ErrorType.Forbidden => Results.Problem(e.Message, statusCode: 403),
         ErrorType.TooManyRequests => Results.Problem(e.Message, statusCode: 429),
         _ => Results.Problem(e.Message, statusCode: 400),
     };

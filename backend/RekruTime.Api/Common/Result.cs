@@ -1,6 +1,6 @@
 namespace RekruTime.Api.Common;
 
-public enum ErrorType { Validation, NotFound, Conflict, Gone, BadRequest, BadGateway, Unauthorized, TooManyRequests }
+public enum ErrorType { Validation, NotFound, Conflict, Gone, BadRequest, BadGateway, Unauthorized, Forbidden, TooManyRequests }
 
 // A business-rule failure. Services return it; endpoints turn it into HTTP (ResultHttp).
 public sealed record Error(ErrorType Type, string Message, string? Field = null)
@@ -12,6 +12,7 @@ public sealed record Error(ErrorType Type, string Message, string? Field = null)
     public static Error BadRequest(string message) => new(ErrorType.BadRequest, message);
     public static Error BadGateway(string message) => new(ErrorType.BadGateway, message);
     public static Error Unauthorized() => new(ErrorType.Unauthorized, "");
+    public static Error Forbidden(string message) => new(ErrorType.Forbidden, message);
     public static Error TooManyRequests(string message) => new(ErrorType.TooManyRequests, message);
 }
 
