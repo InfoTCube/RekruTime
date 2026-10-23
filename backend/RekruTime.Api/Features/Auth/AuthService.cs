@@ -8,7 +8,8 @@ namespace RekruTime.Api.Features.Auth;
 
 public record LoginRequest(string Email, string Password);
 public record SectionRef(int Id, string Name);
-public record MeResponse(string Id, string Email, string DisplayName, IList<string> Roles, List<SectionRef> Sections, bool MustChangePassword);
+public record MySection(int Id, string Name, bool IsLeader);
+public record MeResponse(string Id, string Email, string DisplayName, IList<string> Roles, List<MySection> Sections, bool MustChangePassword);
 public record ChangePasswordRequest([Required] string CurrentPassword, [Required, StringLength(128)] string NewPassword);
 
 public class AuthService(AppDbContext db, UserManager<AppUser> users, SignInManager<AppUser> signIn)
@@ -47,5 +48,5 @@ public class AuthService(AppDbContext db, UserManager<AppUser> users, SignInMana
     async Task<MeResponse> MeAsync(AppUser user) =>
         new(user.Id, user.Email!, user.DisplayName, await users.GetRolesAsync(user),
             await db.UserSections.Where(us => us.UserId == user.Id).OrderBy(us => us.Section.Name)
-                .Select(us => new SectionRef(us.SectionId, us.Section.Name)).ToListAsync(), user.MustChangePassword);
+                .Select(us => new MySection(us.SectionId, us.Section.Name, us.IsLeader)).ToListAsync(), user.MustChangePassword);
 }

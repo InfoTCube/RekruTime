@@ -9,9 +9,9 @@ import { notifySuccess } from '../../notify'
 import { IconPlus, IconTrash } from '@tabler/icons-react'
 import { useSections } from '../../sections'
 
-type User = { id: string; email: string; displayName: string; role: 'Admin' | 'Recruiter'; sectionIds: number[] }
+type User = { id: string; email: string; displayName: string; role: 'Admin' | 'Recruiter'; sectionIds: number[]; leaderSectionIds: number[] }
 type UserForm = Omit<User, 'id'>
-const empty: UserForm = { email: '', displayName: '', role: 'Recruiter', sectionIds: [] }
+const empty: UserForm = { email: '', displayName: '', role: 'Recruiter', sectionIds: [], leaderSectionIds: [] }
 const usersKey = ['users']
 
 export function UsersPage() {
@@ -90,8 +90,9 @@ export function UsersPage() {
                     <Table.Td>
                       <Group gap={4}>
                         {u.sectionIds.map((id) => (
-                          <Badge key={id} variant="outline" size="sm">
+                          <Badge key={id} variant={u.leaderSectionIds.includes(id) ? 'filled' : 'outline'} size="sm" title={u.leaderSectionIds.includes(id) ? 'Section leader' : undefined}>
                             {sectionName(id)}
+                            {u.leaderSectionIds.includes(id) && ' · leader'}
                           </Badge>
                         ))}
                       </Group>
@@ -199,6 +200,7 @@ function UserFormView(props: {
     displayName: props.initial.displayName,
     role: props.initial.role,
     sectionIds: props.initial.sectionIds,
+    leaderSectionIds: props.initial.leaderSectionIds,
   })
   const fieldErrorsShown = ['Email', 'DisplayName', 'Role', 'SectionIds'].some((f) => fieldError(props.error, f))
 
@@ -233,8 +235,21 @@ function UserFormView(props: {
           data={props.sections}
           value={form.sectionIds.map(String)}
           error={fieldError(props.error, 'SectionIds')}
-          onChange={(v) => setForm({ ...form, sectionIds: v.map(Number) })}
+          onChange={(v) => {
+            const sectionIds = v.map(Number)
+            setForm({ ...form, sectionIds, leaderSectionIds: form.leaderSectionIds.filter((id) => sectionIds.includes(id)) })
+          }}
           searchable
+          clearable
+        />
+        <MultiSelect
+          label="Section leader of"
+          description="Section leaders read interview notes and vote on recruits of their sections."
+          placeholder={form.leaderSectionIds.length ? undefined : 'None'}
+          data={props.sections.filter((s) => form.sectionIds.includes(Number(s.value)))}
+          value={form.leaderSectionIds.map(String)}
+          onChange={(v) => setForm({ ...form, leaderSectionIds: v.map(Number) })}
+          disabled={!form.sectionIds.length}
           clearable
         />
         <Group justify="flex-end">
