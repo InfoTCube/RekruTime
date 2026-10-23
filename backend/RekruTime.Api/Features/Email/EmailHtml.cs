@@ -7,7 +7,7 @@ namespace RekruTime.Api.Features.Email;
 public record HtmlTexts(string Recruitment, string Button, string LinkFallback, string Footer);
 
 // Wraps an editable plain-text e-mail in an HTML layout: blank line = paragraph, a line that is only the
-// booking link = big button, other URLs / e-mail addresses = links. Table layout + inline styles, because
+// booking link = big button (link null = no button, e.g. decisions), other URLs / e-mail addresses = links. Table layout + inline styles, because
 // Gmail and Outlook ignore <style> blocks and most modern CSS.
 public static partial class EmailHtml
 {
@@ -15,7 +15,7 @@ public static partial class EmailHtml
     const string Header = "#26235c", Accent = "#0c8178", Text = "#22253a", Muted = "#6b7280", Page = "#f6f7fb";
     const string Font = "font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;";
 
-    public static string Build(string text, string link, HtmlTexts texts, string header)
+    public static string Build(string text, string? link, HtmlTexts texts, string header)
     {
         var content = new StringBuilder();
         var lines = new List<string>();
@@ -30,12 +30,12 @@ public static partial class EmailHtml
         {
             var line = raw.Trim();
             if (line == "") Paragraph();
-            else if (line == link) { Paragraph(); content.Append(Button(link, texts.Button)); }
+            else if (link is not null && line == link) { Paragraph(); content.Append(Button(link, texts.Button)); }
             else lines.Add(Linkify(line));
         }
         Paragraph();
 
-        var href = WebUtility.HtmlEncode(link);
+        var fallback = link is null ? "" : $"{WebUtility.HtmlEncode(texts.LinkFallback)}<br><a href=\"{WebUtility.HtmlEncode(link)}\" style=\"color:{Muted};word-break:break-all\">{WebUtility.HtmlEncode(link)}</a><br><br>";
         var headerRow =
             $"<tr><td bgcolor=\"{Header}\" style=\"background-color:{Header};padding:20px 32px;{Font}font-size:18px;font-weight:bold;color:#ffffff\">{WebUtility.HtmlEncode(header)}</td></tr>";
         return $"""
@@ -49,7 +49,7 @@ public static partial class EmailHtml
             <tr><td height="4" bgcolor="#26c6b8" style="height:4px;font-size:0;line-height:0;background-color:#26c6b8">&nbsp;</td></tr>
             <tr><td style="padding:32px">{content}</td></tr>
             <tr><td style="padding:16px 32px 24px;border-top:1px solid #e5e7eb;{Font}font-size:12px;line-height:18px;color:{Muted}">
-            {WebUtility.HtmlEncode(texts.LinkFallback)}<br><a href="{href}" style="color:{Muted};word-break:break-all">{href}</a><br><br>{WebUtility.HtmlEncode(texts.Footer)}
+            {fallback}{WebUtility.HtmlEncode(texts.Footer)}
             </td></tr>
             </table>
             <!--[if mso]></td></tr></table><![endif]-->

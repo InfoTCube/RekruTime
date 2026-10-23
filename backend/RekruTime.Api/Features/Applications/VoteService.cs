@@ -23,6 +23,7 @@ public class VoteService(AppDbContext db)
         var me = await VoterAsync(userId, app.SectionId);
         if (!me.IsLeader && !me.IsAdmin) return Error.Forbidden("Only leaders of this section and admins can vote.");
         if (votes.Any(v => v.IsFinal)) return Error.Conflict("A final decision has already been made.");
+        if (app.DecisionSentAt is not null) return Error.Conflict("The decision e-mail was already sent – votes are locked.");
 
         var existing = await db.ApplicationVotes.SingleOrDefaultAsync(v => v.ApplicationId == app.Id && v.UserId == userId);
         if (req.IsFinal)

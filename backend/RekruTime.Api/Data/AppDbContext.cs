@@ -58,6 +58,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
         b.Entity<EmailMessage>().HasOne<BookingLink>().WithMany().HasForeignKey(m => m.BookingLinkId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<EmailMessage>().HasIndex(m => new { m.Status, m.NextAttemptAt });
+        b.Entity<EmailMessage>().HasOne<Recruit>().WithMany().HasForeignKey(m => m.RecruitId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<EmailTemplate>().HasKey(t => new { t.Key, t.Language });
         b.Entity<BookingLink>().Property(l => l.Language).HasMaxLength(5);
 

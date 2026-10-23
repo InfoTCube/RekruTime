@@ -1,11 +1,14 @@
-import { Alert, Anchor, Badge, Group, Select, Stack, Table, Text } from '@mantine/core'
-import { IconUserCheck } from '@tabler/icons-react'
+import { Alert, Anchor, Badge, Button, Group, Select, Stack, Table, Text } from '@mantine/core'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { IconMailForward, IconUserCheck } from '@tabler/icons-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { errorMessage } from '../api'
 import { isAdmin, useMe } from '../auth'
+import { ConfirmModal } from '../components/ConfirmModal'
 import { EmptyState, PageHeader, TableSkeleton } from '../components/Page'
-import { statusColor, useRecruits, type Application, type ApplicationStatus } from '../recruits'
+import { notifySuccess } from '../notify'
+import { decisionKind, decisionState, recruitsKey, sendDecisions, statusColor, useRecruits, type Application, type ApplicationStatus } from '../recruits'
 import { useSections } from '../sections'
 
 const date = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -20,6 +23,20 @@ export function RecruitsPage() {
   const [sectionId, setSectionId] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const recruits = useRecruits({ sectionId: sectionId ?? undefined, status: status ?? undefined })
+  // Unfiltered list: a filter hides applications, so "ready" is only judged on everything.
+  const all = useRecruits({})
+  const ready = admin ? (all.data ?? []).filter((r) => decisionState(r.applications) === 'ready') : []
+  const accepted = ready.filter((r) => decisionKind(r.applications) === 'accepted').length
+  const [confirming, setConfirming] = useState(false)
+  const queryClient = useQueryClient()
+  const send = useMutation({
+    mutationFn: () => sendDecisions(ready.map((r) => r.id)),
+    onSuccess: (r) => {
+      setConfirming(false)
+      notifySuccess(`${r.queued} decision e-mail${r.queued === 1 ? '' : 's'} queued.`)
+      queryClient.invalidateQueries({ queryKey: recruitsKey })
+    },
+  })
 
   return (
     <Stack>
@@ -35,7 +52,29 @@ export function RecruitsPage() {
           <Select placeholder="All sections" clearable value={sectionId} onChange={setSectionId} data={sectionOptions.map((s) => ({ value: String(s.id), label: s.name }))} />
         )}
         <Select placeholder="Any status" clearable value={status} onChange={setStatus} data={statuses} />
+        {admin && (
+          <Button leftSection={<IconMailForward size={16} />} disabled={!ready.length} onClick={() => (send.reset(), setConfirming(true))}>
+            Send decisions ({ready.length})
+          </Button>
+        )}
       </PageHeader>
+
+      <ConfirmModal
+        opened={confirming}
+        title="Send decision e-mails"
+        message={
+          <>
+            Send decision e-mails to <b>{ready.length}</b> recruit{ready.length === 1 ? '' : 's'} whose applications are all decided: {accepted} accepted,{' '}
+            {ready.length - accepted} rejected. Their votes get locked. Recruits with undecided applications are left out.
+          </>
+        }
+        confirmLabel="Send"
+        color="cortex"
+        loading={send.isPending}
+        error={send.error}
+        onConfirm={() => send.mutate()}
+        onClose={() => setConfirming(false)}
+      />
 
       {recruits.isPending && <TableSkeleton />}
       {recruits.isError && <Alert color="red">{errorMessage(recruits.error)}</Alert>}
@@ -71,6 +110,11 @@ export function RecruitsPage() {
                       {r.applications.map((a) => (
                         <ApplicationLine key={a.id} application={a} />
                       ))}
+                      {decisionState(r.applications) === 'sent' && (
+                        <Text size="xs" c="dimmed">
+                          ✉ decision sent
+                        </Text>
+                      )}
                     </Stack>
                   </Table.Td>
                   <Table.Td>{r.interview ? date(r.interview.start) : <Text c="dimmed">—</Text>}</Table.Td>

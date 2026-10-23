@@ -73,17 +73,9 @@ public static class Invitations
             ["{deadline}"] = v.Deadline?.ToString("d MMMM yyyy", culture) ?? "",
             ["{contact}"] = v.Contact ?? "",
         };
-        var body = Fill(t.Body, values);
+        var body = EmailTemplates.Fill(t.Body, values);
         var html = Html.GetValueOrDefault(language, Html["pl"]);
         var header = string.IsNullOrWhiteSpace(clubName) ? html.Recruitment : $"{html.Recruitment} – {clubName.Trim()}";
-        return new(Fill(t.Subject, values), body, EmailHtml.Build(body, v.Link, html, header));
-    }
-
-    // An empty value takes the space before it along ("Cześć {name}!" → "Cześć!" for anonymous links).
-    static string Fill(string text, Dictionary<string, string> values)
-    {
-        foreach (var (key, value) in values)
-            text = value == "" ? text.Replace(" " + key, "").Replace(key, "") : text.Replace(key, value);
-        return text;
+        return new(EmailTemplates.Fill(t.Subject, values), body, EmailHtml.Build(body, v.Link, html, header));
     }
 }

@@ -19,4 +19,5 @@ public class EmailMessage
     public DateTime NextAttemptAt { get; set; } = DateTime.UtcNow;
     public DateTime? SentAt { get; set; }
     public int? BookingLinkId { get; set; } // invitation for this link (deleted with it – contains personal data)
+    public int? RecruitId { get; set; }     // decision for this recruit (deleted with them)
 }

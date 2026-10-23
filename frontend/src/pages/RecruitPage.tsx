@@ -3,17 +3,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { api, errorMessage } from '../api'
-import { useMe } from '../auth'
+import { isAdmin, useMe } from '../auth'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { PageHeader, TableSkeleton } from '../components/Page'
 import { statusColor as interviewColor } from '../interviews'
-import { recruitsKey, statusColor, type Application, type Decision, type RecruitDetail } from '../recruits'
+import { notifySuccess } from '../notify'
+import { decisionKind, decisionState, recruitsKey, sendDecisions, statusColor, type Application, type Decision, type RecruitDetail } from '../recruits'
 import { OtherNote } from './InterviewPage'
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 export function RecruitPage() {
   const id = Number(useParams().id)
+  const me = useMe()
   const detail = useQuery({ queryKey: [...recruitsKey, id], queryFn: () => api<RecruitDetail>(`/api/recruits/${id}`) })
   const r = detail.data?.recruit
 
@@ -50,6 +52,7 @@ export function RecruitPage() {
           {detail.data.applications.map((a) => (
             <ApplicationCard key={a.id} application={a} />
           ))}
+          {isAdmin(me.data) && detail.data.applications.length > 0 && <DecisionPanel recruitId={id} name={detail.data.recruit.fullName} applications={detail.data.applications} />}
 
           <Title order={3} mt="md">
             Interviews and notes
@@ -97,6 +100,66 @@ export function RecruitPage() {
         </>
       )}
     </Stack>
+  )
+}
+
+// Admins send the decision e-mail by hand once everything is decided; it locks the votes.
+function DecisionPanel({ recruitId, name, applications }: { recruitId: number; name: string; applications: Application[] }) {
+  const queryClient = useQueryClient()
+  const [confirming, setConfirming] = useState(false)
+  const send = useMutation({
+    mutationFn: () => sendDecisions([recruitId]),
+    onSuccess: (r) => {
+      setConfirming(false)
+      if (r.queued) notifySuccess('Decision e-mail queued.')
+      queryClient.invalidateQueries({ queryKey: recruitsKey })
+    },
+  })
+  const state = decisionState(applications)
+  const kind = decisionKind(applications)
+  const accepted = applications.filter((a) => a.status === 'Accepted').map((a) => a.sectionName)
+  const sentAt = applications.find((a) => a.decisionSentAt)?.decisionSentAt
+
+  if (state === 'sent')
+    return (
+      <Alert color="gray" title="Decision e-mail sent">
+        Queued on {when(sentAt!)} – see Admin → E-mail for delivery. Votes are locked.
+      </Alert>
+    )
+  if (state === 'waiting')
+    return (
+      <Text size="sm" c="dimmed">
+        The decision e-mail can be sent once every application is accepted or rejected.
+      </Text>
+    )
+  return (
+    <Alert color={kind === 'accepted' ? 'signal' : 'red'} title="Ready to send the decision">
+      <Stack gap="xs">
+        <Text size="sm">
+          {kind === 'accepted' ? `${name} gets the "accepted" e-mail (${accepted.join(', ')}).` : `${name} gets the "rejected" e-mail.`} Sending locks the votes.
+        </Text>
+        <Group>
+          <Button size="xs" onClick={() => (send.reset(), setConfirming(true))}>
+            Send decision e-mail
+          </Button>
+        </Group>
+      </Stack>
+      <ConfirmModal
+        opened={confirming}
+        title="Send decision e-mail"
+        message={
+          <>
+            Send the <b>{kind}</b> e-mail to <b>{name}</b>? After this the votes can't be changed.
+          </>
+        }
+        confirmLabel="Send"
+        color={kind === 'accepted' ? 'signal' : 'red'}
+        loading={send.isPending}
+        error={send.error}
+        onConfirm={() => send.mutate()}
+        onClose={() => setConfirming(false)}
+      />
+    </Alert>
   )
 }
 
@@ -184,10 +247,16 @@ function ApplicationCard({ application: a }: { application: Application }) {
             </Stack>
           </Alert>
         )}
-        {decided && (
+        {a.decisionSentAt ? (
           <Text size="xs" c="dimmed">
-            Final decision made – votes are locked.
+            Decision e-mail sent – votes are locked.
           </Text>
+        ) : (
+          decided && (
+            <Text size="xs" c="dimmed">
+              Final decision made – votes are locked.
+            </Text>
+          )
         )}
       </Stack>
 

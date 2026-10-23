@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Code, Group, Loader, Paper, Skeleton, SimpleGrid, Stack, Tabs, Text, Textarea, TextInput, Title } from '@mantine/core'
+import { Alert, Badge, Button, Code, Group, Loader, Paper, SegmentedControl, Skeleton, SimpleGrid, Stack, Tabs, Text, Textarea, TextInput, Title } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -9,25 +9,49 @@ type Template = { key: string; language: string; subject: string; body: string; 
 type Rendered = { subject: string; body: string; html: string }
 
 const languageNames: Record<string, string> = { pl: 'Polski', en: 'English' }
-const placeholders: [string, string][] = [
+const common: [string, string][] = [
   ['{firstName}', 'first name'],
   ['{name}', 'full name'],
-  ['{link}', 'personal booking link'],
-  ['{sections}', 'their sections'],
-  ['{deadline}', 'last interview day'],
-  ['{contact}', 'contact e-mail'],
 ]
+// Every e-mail admins can edit (keys match the API's EmailTemplates).
+const kinds: Record<string, { label: string; title: string; when: string; placeholders: [string, string][] }> = {
+  invitation: {
+    label: 'Invitation',
+    title: 'Invitation e-mail',
+    when: "Sent with each personal booking link, in the recruit's language.",
+    placeholders: [...common, ['{link}', 'personal booking link'], ['{sections}', 'their sections'], ['{deadline}', 'last interview day'], ['{contact}', 'contact e-mail']],
+  },
+  accepted: {
+    label: 'Accepted',
+    title: 'Decision: accepted',
+    when: 'Sent when an admin sends the decision and at least one application was accepted.',
+    placeholders: [...common, ['{sections}', 'accepted sections'], ['{contact}', 'contact e-mail']],
+  },
+  rejected: {
+    label: 'Rejected',
+    title: 'Decision: rejected',
+    when: 'Sent when an admin sends the decision and every application was rejected.',
+    placeholders: [...common, ['{sections}', 'sections they applied to'], ['{contact}', 'contact e-mail']],
+  },
+}
 
 export function TemplateEditor() {
   const templates = useQuery({ queryKey: ['email-templates'], queryFn: () => api<Template[]>('/api/email/templates') })
+  const [key, setKey] = useState('invitation')
   if (templates.isPending) return <Skeleton height={320} />
   if (templates.isError) return <Alert color="red">{errorMessage(templates.error)}</Alert>
+  const kind = kinds[key]
+  const list = templates.data.filter((t) => t.key === key)
+  const placeholders = kind.placeholders
 
   return (
     <Stack>
-      <Title order={4}>Invitation e-mail</Title>
+      <Group justify="space-between">
+        <Title order={4}>{kind.title}</Title>
+        <SegmentedControl value={key} onChange={setKey} data={Object.entries(kinds).map(([value, k]) => ({ value, label: k.label }))} />
+      </Group>
       <Text size="sm" c="dimmed">
-        Sent with each personal booking link, in the recruit's language. Placeholders:{' '}
+        {kind.when} Placeholders:{' '}
         {placeholders.map(([p, what], i) => (
           <span key={p}>
             <Code>{p}</Code> {what}
@@ -36,15 +60,15 @@ export function TemplateEditor() {
         ))}
         .
       </Text>
-      <Tabs defaultValue={templates.data[0]?.language}>
+      <Tabs key={key} defaultValue={list[0]?.language}>
         <Tabs.List>
-          {templates.data.map((t) => (
+          {list.map((t) => (
             <Tabs.Tab key={t.language} value={t.language} rightSection={!t.isDefault && <Badge size="xs">edited</Badge>}>
               {languageNames[t.language] ?? t.language}
             </Tabs.Tab>
           ))}
         </Tabs.List>
-        {templates.data.map((t) => (
+        {list.map((t) => (
           <Tabs.Panel key={t.language} value={t.language} pt="md">
             <TemplateForm key={`${t.subject}|${t.body}`} template={t} />
           </Tabs.Panel>
@@ -59,17 +83,17 @@ function TemplateForm({ template }: { template: Template }) {
   const [subject, setSubject] = useState(template.subject)
   const [body, setBody] = useState(template.body)
   const [debounced] = useDebouncedValue({ subject, body }, 400)
-  const url = `/api/email/templates/${template.language}`
+  const url = `/api/email/templates/${template.key}/${template.language}`
 
   const preview = useQuery({
-    queryKey: ['email-template-preview', template.language, debounced],
+    queryKey: ['email-template-preview', template.key, template.language, debounced],
     queryFn: () => api<Rendered>(`${url}/preview`, { method: 'POST', json: debounced }),
     enabled: !!debounced.subject && !!debounced.body,
   })
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['email-templates'] })
   const save = useMutation({
     mutationFn: () => api(url, { method: 'PUT', json: { subject, body } }),
-    onSuccess: () => (notifySuccess('Invitation text saved.'), refresh()),
+    onSuccess: () => (notifySuccess('E-mail text saved.'), refresh()),
   })
   const reset = useMutation({ mutationFn: () => api(url, { method: 'DELETE' }), onSuccess: refresh })
   const changed = subject !== template.subject || body !== template.body
