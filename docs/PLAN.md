@@ -252,10 +252,10 @@ Same visibility as notes: interviewers, leaders of the interview's sections, adm
 | Trigger | Content |
 |---|---|
 | "Invite to interview" (phase 3) or manual send from admin links page | Personal booking link |
-| Booking created | Confirmation: date, time, room, `.ics` attachment |
-| Booking created | Notification to the assigned interviewers |
-| Booking created | (Later) self-cancel/reschedule link – out of MVP scope, decide when mailing lands |
-| Admin cancels/reschedules | Update to recruit + interviewers |
+| Booking created (#35) | Confirmation: date, time, place, link, `.ics` attachment (template `confirmation`) |
+| Booking created (#35) | Notice to the assigned interviewers (fixed English text, link to the interview, `.ics`) |
+| – | Recruit self-cancel/reschedule: **not built** (#35 decision) – recruits write to `{contact}`, an admin cancels and the link works again |
+| Admin cancels/moves/swaps interviewers (#35, "notify" on by default) | Recruit: `rescheduled` / `cancelled` (with the link to rebook); team: moved / cancelled / added / removed notices. `.ics` with a stable UID updates or cancels the calendar event |
 | Day before (optional) | Reminder |
 | Admin clicks "Send decision" (#36) | Accepted / rejected email – **manual trigger**, never automatic on vote. One per recruit once all their applications are decided: "accepted" (listing accepted sections) if any, else "rejected". Sending locks the votes. Templates `accepted`/`rejected` per language, editable like the invitation |
 | User created | Account invite with set-password link (replaces temp passwords) |
@@ -282,6 +282,7 @@ Same visibility as notes: interviewers, leaders of the interview's sections, adm
 9. Recruits are imported from the Google Form export and invited by e-mail with personal links (#62–#66).
 10. E-mail via any SMTP server: club Gmail first, a relay (Brevo) as the fallback; CSV export always works.
 11. Recruit-facing texts in Polish by default, English included, more languages = one dictionary file each.
+12. No recruit self-cancel/reschedule link (yet): recruits write to the contact e-mail, an admin cancels (the link reopens) or moves the interview – both e-mail the recruit.
 
 ## Future (not planned in detail)
 

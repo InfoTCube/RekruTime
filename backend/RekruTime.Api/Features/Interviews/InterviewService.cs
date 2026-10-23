@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RekruTime.Api.Common;
 using RekruTime.Api.Data;
+using RekruTime.Api.Features.Email;
 using RekruTime.Api.Features.Auth;
 
 namespace RekruTime.Api.Features.Interviews;
@@ -19,9 +20,10 @@ public record InterviewAccess(bool IsInterviewer, bool IsLeader)
 }
 
 // All fields optional: cancel / mark done, swap interviewers, move to another time.
-public record UpdateInterviewRequest(InterviewStatus? Status, string[]? InterviewerIds, DateTimeOffset? Start);
+// Notify (default true): e-mail the recruit and the interviewers about a new time, a cancellation or a new team.
+public record UpdateInterviewRequest(InterviewStatus? Status, string[]? InterviewerIds, DateTimeOffset? Start, bool Notify = true);
 
-public class InterviewService(AppDbContext db)
+public class InterviewService(AppDbContext db, BookingEmailService emails)
 {
     // Recruiters see the interviews they conduct (onlyFor = their id); admins see all (onlyFor = null).
     public Task<List<InterviewDto>> ListAsync(InterviewFilter f, string? onlyFor)
@@ -54,6 +56,7 @@ public class InterviewService(AppDbContext db)
     {
         var interview = await db.Interviews.Include(i => i.Interviewers).FirstOrDefaultAsync(i => i.Id == id);
         if (interview is null) return Error.NotFound();
+        var (oldStart, oldStatus, oldTeam) = (interview.Start, interview.Status, interview.Interviewers.Select(u => u.Id).ToList());
 
         if (req.InterviewerIds is { } ids)
         {
@@ -81,6 +84,24 @@ public class InterviewService(AppDbContext db)
         catch (Exception e) when (DbErrors.IsUniqueViolation(e))
         {
             return Error.Conflict("This recruit's link already has another active interview.");
+        }
+
+        if (req.Notify)
+        {
+            var team = interview.Interviewers.Select(u => u.Id).ToList();
+            var (added, removed) = (team.Except(oldTeam).ToList(), oldTeam.Except(team).ToList());
+            InterviewChange? change =
+                interview.Status == InterviewStatus.Cancelled && oldStatus != InterviewStatus.Cancelled ? InterviewChange.Cancelled
+                : interview.Status == InterviewStatus.Scheduled && oldStatus == InterviewStatus.Cancelled ? InterviewChange.Restored
+                : interview.Status == InterviewStatus.Scheduled && interview.Start != oldStart ? InterviewChange.Moved
+                : interview.Status == InterviewStatus.Scheduled && (added.Count > 0 || removed.Count > 0) ? InterviewChange.TeamChanged
+                : null; // marking Done, or nothing a person needs to hear about
+            if (change is { } c)
+            {
+                var swap = c is InterviewChange.Moved or InterviewChange.TeamChanged; // a cancellation/restore tells the current team only
+                await emails.QueueAsync(id, c, swap ? added : null, swap ? removed : null);
+                await db.SaveChangesAsync();
+            }
         }
         return await Project(db.Interviews.Where(i => i.Id == id)).SingleAsync();
     }

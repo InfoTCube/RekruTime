@@ -12,6 +12,7 @@ public class EmailMessage
     public required string Subject { get; set; }
     public required string Body { get; set; } // plain text (always sent – alternative part for clients without HTML)
     public string? HtmlBody { get; set; }
+    public string? Calendar { get; set; } // .ics event attached as invite.ics (booking e-mails)
     public EmailStatus Status { get; set; } = EmailStatus.Pending;
     public int Attempts { get; set; }
     public string? LastError { get; set; }

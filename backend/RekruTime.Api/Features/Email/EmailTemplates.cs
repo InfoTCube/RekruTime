@@ -8,6 +8,9 @@ public static class EmailTemplates
         [Invitations.Key] = Invitations.Defaults,
         [Decisions.Accepted] = Decisions.AcceptedDefaults,
         [Decisions.Rejected] = Decisions.RejectedDefaults,
+        [BookingMails.Confirmation] = BookingMails.ConfirmationDefaults,
+        [BookingMails.Rescheduled] = BookingMails.RescheduledDefaults,
+        [BookingMails.Cancelled] = BookingMails.CancelledDefaults,
     };
 
     // Without it the e-mail is useless (the invitation must contain the booking link).

@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Code, Group, Loader, Paper, SegmentedControl, Skeleton, SimpleGrid, Stack, Tabs, Text, Textarea, TextInput, Title } from '@mantine/core'
+import { Alert, Badge, Button, Code, Group, Loader, Paper, Select, Skeleton, SimpleGrid, Stack, Tabs, Text, Textarea, TextInput, Title } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -12,6 +12,15 @@ const languageNames: Record<string, string> = { pl: 'Polski', en: 'English' }
 const common: [string, string][] = [
   ['{firstName}', 'first name'],
   ['{name}', 'full name'],
+]
+const booking: [string, string][] = [
+  ...common,
+  ['{date}', 'interview day'],
+  ['{time}', 'start–end'],
+  ['{sections}', 'their sections'],
+  ['{location}', 'interview place'],
+  ['{link}', 'their booking page'],
+  ['{contact}', 'contact e-mail'],
 ]
 // Every e-mail admins can edit (keys match the API's EmailTemplates).
 const kinds: Record<string, { label: string; title: string; when: string; placeholders: [string, string][] }> = {
@@ -33,6 +42,24 @@ const kinds: Record<string, { label: string; title: string; when: string; placeh
     when: 'Sent when an admin sends the decision and every application was rejected.',
     placeholders: [...common, ['{sections}', 'sections they applied to'], ['{contact}', 'contact e-mail']],
   },
+  confirmation: {
+    label: 'Booking confirmation',
+    title: 'Booking confirmation',
+    when: 'Sent right after a recruit books (and when an admin restores a cancelled interview), with a calendar event attached.',
+    placeholders: booking,
+  },
+  rescheduled: {
+    label: 'New time',
+    title: 'Interview moved',
+    when: 'Sent when an admin moves an interview (if "notify" is on), with the updated calendar event.',
+    placeholders: booking,
+  },
+  cancelled: {
+    label: 'Cancelled',
+    title: 'Interview cancelled',
+    when: 'Sent when an admin cancels an interview (if "notify" is on). The link works again, so they can pick a new time.',
+    placeholders: booking,
+  },
 }
 
 export function TemplateEditor() {
@@ -48,7 +75,13 @@ export function TemplateEditor() {
     <Stack>
       <Group justify="space-between">
         <Title order={4}>{kind.title}</Title>
-        <SegmentedControl value={key} onChange={setKey} data={Object.entries(kinds).map(([value, k]) => ({ value, label: k.label }))} />
+        <Select
+          aria-label="E-mail"
+          value={key}
+          onChange={(v) => v && setKey(v)}
+          allowDeselect={false}
+          data={Object.entries(kinds).map(([value, k]) => ({ value, label: k.label }))}
+        />
       </Group>
       <Text size="sm" c="dimmed">
         {kind.when} Placeholders:{' '}

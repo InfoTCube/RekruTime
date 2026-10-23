@@ -437,6 +437,9 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<int?>("BookingLinkId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Calendar")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
