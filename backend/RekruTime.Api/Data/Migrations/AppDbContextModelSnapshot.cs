@@ -502,6 +502,37 @@ namespace RekruTime.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RekruTime.Api.Data.InterviewNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AuthorId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("InterviewId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("InterviewId", "AuthorId")
+                        .IsUnique();
+
+                    b.ToTable("InterviewNotes");
+                });
+
             modelBuilder.Entity("RekruTime.Api.Data.Recruit", b =>
                 {
                     b.Property<int>("Id")
@@ -766,6 +797,22 @@ namespace RekruTime.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Recruit");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.InterviewNote", b =>
+                {
+                    b.HasOne("RekruTime.Api.Data.AppUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("RekruTime.Api.Data.Interview", null)
+                        .WithMany()
+                        .HasForeignKey("InterviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
                 });
 
             modelBuilder.Entity("RekruTime.Api.Data.UserSection", b =>

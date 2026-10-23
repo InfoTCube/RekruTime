@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Recruit> Recruits => Set<Recruit>();
     public DbSet<Application> Applications => Set<Application>();
     public DbSet<Interview> Interviews => Set<Interview>();
+    public DbSet<InterviewNote> InterviewNotes => Set<InterviewNote>();
     public DbSet<RecruitmentSettings> RecruitmentSettings => Set<RecruitmentSettings>();
     public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
@@ -76,6 +77,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         {
             t.HasCheckConstraint("CK_Interviews_Range", "\"End\" > \"Start\" AND \"BlockedUntil\" >= \"End\"");
         });
+        // Deleting the recruit (GDPR) deletes their interviews and so the notes.
+        b.Entity<InterviewNote>().HasOne<Interview>().WithMany().HasForeignKey(n => n.InterviewId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<InterviewNote>().HasOne(n => n.Author).WithMany().HasForeignKey(n => n.AuthorId).OnDelete(DeleteBehavior.SetNull);
+        b.Entity<InterviewNote>().HasIndex(n => new { n.InterviewId, n.AuthorId }).IsUnique();
         // The room-overlap exclusion constraint is raw SQL in the migration (EF can't model EXCLUDE).
     }
 }
