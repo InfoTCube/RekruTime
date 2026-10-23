@@ -48,7 +48,7 @@ export function InterviewPage() {
   )
 }
 
-function OtherNote({ note }: { note: Note }) {
+export function OtherNote({ note }: { note: Note }) {
   return (
     <Paper withBorder p="sm">
       <Text size="sm" fw={600}>
