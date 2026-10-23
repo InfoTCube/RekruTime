@@ -98,6 +98,7 @@ public class PublicBookingService(AppDbContext db, SlotService slots, IOptions<C
             Sections = link.Sections,
             Interviewers = await db.Users.Where(u => slot.Team.Contains(u.Id)).ToListAsync(),
         }).Entity;
+        ReminderJob.Reset(interview, DateTime.UtcNow);
 
         try
         {

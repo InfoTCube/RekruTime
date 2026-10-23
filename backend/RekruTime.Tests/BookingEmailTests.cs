@@ -61,6 +61,8 @@ public class BookingMailTextTests
     [InlineData(BookingMails.Rescheduled, "en")]
     [InlineData(BookingMails.Cancelled, "pl")]
     [InlineData(BookingMails.Cancelled, "en")]
+    [InlineData(BookingMails.Reminder, "pl")]
+    [InlineData(BookingMails.Reminder, "en")]
     public void Defaults_fill_every_placeholder(string key, string language)
     {
         var v = new BookingValues("Jan Kowalski", Start, Start.AddMinutes(30), ["AI"], null, "kontakt@kn.pl", "https://kn.pl/book/abc");

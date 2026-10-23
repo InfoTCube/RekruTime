@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Code, Group, Paper, SegmentedControl, Skeleton, Stack, Table, Text, Title, Tooltip } from '@mantine/core'
+import { Alert, Badge, Button, Code, Group, Paper, SegmentedControl, Skeleton, Stack, Switch, Table, Text, Title, Tooltip } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, errorMessage } from '../../api'
@@ -26,6 +26,14 @@ export function EmailPage() {
     mutationFn: () => api<{ sentTo: string }>('/api/email/test', { method: 'POST' }),
     onSuccess: (r) => notifySuccess(`Sent to ${r.sentTo} – check the inbox (and spam).`, 'Test e-mail sent'),
   })
+  const reminders = useQuery({ queryKey: ['reminders'], queryFn: () => api<{ enabled: boolean }>('/api/settings/reminders') })
+  const setReminders = useMutation({
+    mutationFn: (enabled: boolean) => api<{ enabled: boolean }>('/api/settings/reminders', { method: 'PUT', json: { enabled } }),
+    onSuccess: (r) => {
+      queryClient.setQueryData(['reminders'], r)
+      notifySuccess(r.enabled ? 'Reminders turned on.' : 'Reminders turned off.')
+    },
+  })
   const retry = useMutation({
     mutationFn: (id: number) => api(`/api/email/messages/${id}/retry`, { method: 'POST' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['email-messages'] }),
@@ -33,7 +41,10 @@ export function EmailPage() {
 
   return (
     <Stack>
-      <PageHeader title="E-mail" description="Invitations and decision e-mails go out through the SMTP server set on the server. Edit the texts below; recent e-mails and their status are at the bottom." />
+      <PageHeader
+        title="E-mail"
+        description="Invitations, booking and decision e-mails go out through the SMTP server set on the server. Edit the texts below; recent e-mails and their status are at the bottom."
+      />
 
       <Paper withBorder p="md">
         {settings.isPending && <Skeleton height={60} />}
@@ -57,6 +68,19 @@ export function EmailPage() {
             {test.isError && <Alert color="red">{errorMessage(test.error)}</Alert>}
           </Stack>
         )}
+      </Paper>
+
+      <Paper withBorder p="md">
+        <Stack gap="xs">
+          <Switch
+            label="Send recruits a reminder 24 hours before their interview"
+            description="Uses the Reminder text below. Skipped when they booked or the interview was moved within the last day – that e-mail already told them."
+            checked={reminders.data?.enabled ?? false}
+            disabled={!reminders.data || setReminders.isPending}
+            onChange={(e) => setReminders.mutate(e.currentTarget.checked)}
+          />
+          {setReminders.isError && <Alert color="red">{errorMessage(setReminders.error)}</Alert>}
+        </Stack>
       </Paper>
 
       <TemplateEditor />

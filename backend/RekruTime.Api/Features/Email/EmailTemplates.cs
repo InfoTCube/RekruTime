@@ -11,6 +11,7 @@ public static class EmailTemplates
         [BookingMails.Confirmation] = BookingMails.ConfirmationDefaults,
         [BookingMails.Rescheduled] = BookingMails.RescheduledDefaults,
         [BookingMails.Cancelled] = BookingMails.CancelledDefaults,
+        [BookingMails.Reminder] = BookingMails.ReminderDefaults,
     };
 
     // Without it the e-mail is useless (the invitation must contain the booking link).

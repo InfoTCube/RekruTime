@@ -256,7 +256,7 @@ Same visibility as notes: interviewers, leaders of the interview's sections, adm
 | Booking created (#35) | Notice to the assigned interviewers (fixed English text, link to the interview, `.ics`) |
 | – | Recruit self-cancel/reschedule: **not built** (#35 decision) – recruits write to `{contact}`, an admin cancels and the link works again |
 | Admin cancels/moves/swaps interviewers (#35, "notify" on by default) | Recruit: `rescheduled` / `cancelled` (with the link to rebook); team: moved / cancelled / added / removed notices. `.ics` with a stable UID updates or cancels the calendar event |
-| Day before (optional) | Reminder |
+| 24 h before (#38, switch on the E-mail page, **off** by default) | Reminder to the recruit (template `reminder`), once per interview; again after a move; skipped when booked/moved within the last day |
 | Admin clicks "Send decision" (#36) | Accepted / rejected email – **manual trigger**, never automatic on vote. One per recruit once all their applications are decided: "accepted" (listing accepted sections) if any, else "rejected". Sending locks the votes. Templates `accepted`/`rejected` per language, editable like the invitation |
 | User created / admin resets a password (#37) | Link to set the password (`/set-password`, Identity reset token, once, 3 days; logs in). Temp password only when e-mail isn't set up |
 

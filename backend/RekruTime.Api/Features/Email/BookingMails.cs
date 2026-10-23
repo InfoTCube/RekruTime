@@ -11,7 +11,7 @@ public enum StaffNotice { Booked, Moved, Cancelled, Added, Removed }
 // the interviewers' notices are fixed English text like the rest of the staff UI.
 public static class BookingMails
 {
-    public const string Confirmation = "confirmation", Rescheduled = "rescheduled", Cancelled = "cancelled";
+    public const string Confirmation = "confirmation", Rescheduled = "rescheduled", Cancelled = "cancelled", Reminder = "reminder";
 
     public static readonly Dictionary<string, Template> ConfirmationDefaults = new()
     {
@@ -115,6 +115,46 @@ public static class BookingMails
 
             If you have any questions, write to us: {contact}
 
+            The recruitment team
+            """),
+    };
+
+    public static readonly Dictionary<string, Template> ReminderDefaults = new()
+    {
+        ["pl"] = new(
+            "Przypomnienie: rozmowa rekrutacyjna – {date}",
+            """
+            Cześć {firstName}!
+
+            Przypominamy o Twojej rozmowie rekrutacyjnej ({sections}):
+
+            {date}, godz. {time}
+            Miejsce: {location}
+
+            Szczegóły są pod Twoim linkiem:
+            {link}
+
+            Jeśli nie możesz przyjść, daj nam znać jak najszybciej: {contact}
+
+            Do zobaczenia!
+            Zespół rekrutacyjny
+            """),
+        ["en"] = new(
+            "Reminder: your recruitment interview – {date}",
+            """
+            Hi {firstName}!
+
+            A quick reminder about your recruitment interview ({sections}):
+
+            {date}, {time}
+            Place: {location}
+
+            The details are under your link:
+            {link}
+
+            If you can't make it, please let us know as soon as possible: {contact}
+
+            See you soon!
             The recruitment team
             """),
     };

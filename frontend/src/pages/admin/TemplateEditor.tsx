@@ -54,6 +54,12 @@ const kinds: Record<string, { label: string; title: string; when: string; placeh
     when: 'Sent when an admin moves an interview (if "notify" is on), with the updated calendar event.',
     placeholders: booking,
   },
+  reminder: {
+    label: 'Reminder',
+    title: 'Interview reminder',
+    when: 'Sent 24 hours before the interview when reminders are turned on (above). Not sent if they booked or were moved within the last day.',
+    placeholders: booking,
+  },
   cancelled: {
     label: 'Cancelled',
     title: 'Interview cancelled',

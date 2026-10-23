@@ -4,6 +4,7 @@ using RekruTime.Api.Data;
 namespace RekruTime.Api.Features.Settings;
 
 public record RecruitmentPeriodDto(DateOnly? InterviewsFrom, DateOnly? InterviewsTo);
+public record RemindersDto(bool Enabled);
 
 public class SettingsService(AppDbContext db)
 {
@@ -22,6 +23,17 @@ public class SettingsService(AppDbContext db)
         var s = await db.RecruitmentSettings.FindAsync(1);
         if (s is null) db.RecruitmentSettings.Add(s = new RecruitmentSettings());
         (s.InterviewsFrom, s.InterviewsTo) = (req.InterviewsFrom, req.InterviewsTo);
+        await db.SaveChangesAsync();
+        return req;
+    }
+
+    public async Task<RemindersDto> GetRemindersAsync() => new((await db.RecruitmentSettings.FindAsync(1))?.RemindersEnabled ?? false);
+
+    public async Task<RemindersDto> SetRemindersAsync(RemindersDto req)
+    {
+        var s = await db.RecruitmentSettings.FindAsync(1);
+        if (s is null) db.RecruitmentSettings.Add(s = new RecruitmentSettings());
+        s.RemindersEnabled = req.Enabled;
         await db.SaveChangesAsync();
         return req;
     }

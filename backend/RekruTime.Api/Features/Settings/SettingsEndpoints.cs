@@ -13,5 +13,9 @@ public static class SettingsEndpoints
 
         group.MapPut("/recruitment", async (RecruitmentPeriodDto req, SettingsService s) =>
             (await s.SetPeriodAsync(req)).ToHttp()).RequireAuthorization(Roles.Admin);
+
+        group.MapGet("/reminders", (SettingsService s) => s.GetRemindersAsync()).RequireAuthorization(Roles.Admin);
+
+        group.MapPut("/reminders", (RemindersDto req, SettingsService s) => s.SetRemindersAsync(req)).RequireAuthorization(Roles.Admin);
     }
 }

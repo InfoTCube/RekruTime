@@ -5,7 +5,7 @@ using RekruTime.Api.Data;
 
 namespace RekruTime.Api.Features.Email;
 
-public enum InterviewChange { Booked, Moved, Cancelled, Restored, TeamChanged }
+public enum InterviewChange { Booked, Moved, Cancelled, Restored, TeamChanged, Reminder }
 
 // Queues the e-mails about one interview (caller saves): the recruit's confirmation / new time / cancellation and
 // notices to the interviewers, each with a calendar event. Without e-mail configured it does nothing – booking
@@ -35,6 +35,7 @@ public class BookingEmailService(AppDbContext db, TemplateService templates, IOp
             InterviewChange.Booked or InterviewChange.Restored => BookingMails.Confirmation,
             InterviewChange.Moved => BookingMails.Rescheduled,
             InterviewChange.Cancelled => BookingMails.Cancelled,
+            InterviewChange.Reminder => BookingMails.Reminder,
             _ => null, // a new team is internal
         };
         if (recruitKey is not null)
@@ -44,8 +45,8 @@ public class BookingEmailService(AppDbContext db, TemplateService templates, IOp
                 i.FullName, i.Start, i.End, i.Sections, c.InterviewLocation, c.ContactEmail,
                 i.Link is not null && c.HasPublicUrl ? c.BookingUrl(i.Link.Token) : null), language, c.Zone, c.Name);
             var summary = language == "en" ? "Recruitment interview" : "Rozmowa rekrutacyjna";
-            Add(i.Email, i.FullName, mail, Ics.Event(uid, sequence, i.Start, i.End,
-                string.IsNullOrWhiteSpace(c.Name) ? summary : $"{summary} – {c.Name}", c.InterviewLocation, null, cancelled));
+            Add(i.Email, i.FullName, mail, change == InterviewChange.Reminder ? null // the calendar didn't change
+                : Ics.Event(uid, sequence, i.Start, i.End, string.IsNullOrWhiteSpace(c.Name) ? summary : $"{summary} – {c.Name}", c.InterviewLocation, null, cancelled));
         }
 
         // Interviewers – who gets which notice
@@ -57,7 +58,7 @@ public class BookingEmailService(AppDbContext db, TemplateService templates, IOp
             InterviewChange.Booked or InterviewChange.Restored => StaffNotice.Booked,
             InterviewChange.Moved => StaffNotice.Moved,
             InterviewChange.Cancelled => StaffNotice.Cancelled,
-            _ => (StaffNotice?)null, // only the added/removed people hear about a new team
+            _ => (StaffNotice?)null, // new team: only the added/removed people hear about it; reminders are for the recruit
         };
         foreach (var u in i.Team)
         {
@@ -71,7 +72,7 @@ public class BookingEmailService(AppDbContext db, TemplateService templates, IOp
                 Add(u.Email!, u.DisplayName, BookingMails.RenderStaff(StaffNotice.Removed, staff, c.Zone),
                     Ics.Event(uid, sequence, i.Start, i.End, staffEvent, c.InterviewLocation, null, cancelled: true));
 
-        void Add(string to, string? name, RenderedEmail mail, string calendar) => db.EmailMessages.Add(new EmailMessage
+        void Add(string to, string? name, RenderedEmail mail, string? calendar) => db.EmailMessages.Add(new EmailMessage
         {
             To = to, ToName = name, Subject = mail.Subject, Body = mail.Body, HtmlBody = mail.Html, Calendar = calendar, RecruitId = i.RecruitId,
         });
