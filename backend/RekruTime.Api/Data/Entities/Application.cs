@@ -1,6 +1,6 @@
 namespace RekruTime.Api.Data;
 
-public enum ApplicationStatus { Pending }
+public enum ApplicationStatus { Pending, Disputed, Accepted, Rejected }
 
 public class Application
 {

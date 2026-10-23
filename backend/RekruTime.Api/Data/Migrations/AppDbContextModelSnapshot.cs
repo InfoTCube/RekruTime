@@ -301,6 +301,45 @@ namespace RekruTime.Api.Data.Migrations
                     b.ToTable("Applications");
                 });
 
+            modelBuilder.Entity("RekruTime.Api.Data.ApplicationVote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ApplicationId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsFinal")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ApplicationId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("ApplicationVotes");
+                });
+
             modelBuilder.Entity("RekruTime.Api.Data.Availability", b =>
                 {
                     b.Property<int>("Id")
@@ -749,6 +788,23 @@ namespace RekruTime.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Section");
+                });
+
+            modelBuilder.Entity("RekruTime.Api.Data.ApplicationVote", b =>
+                {
+                    b.HasOne("RekruTime.Api.Data.Application", null)
+                        .WithMany()
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RekruTime.Api.Data.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("RekruTime.Api.Data.Availability", b =>
