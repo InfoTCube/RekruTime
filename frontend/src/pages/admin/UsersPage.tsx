@@ -11,6 +11,7 @@ import { useSections } from '../../sections'
 
 type User = { id: string; email: string; displayName: string; role: 'Admin' | 'Recruiter'; sectionIds: number[]; leaderSectionIds: number[] }
 type UserForm = Omit<User, 'id'>
+type Created = { user: User; temporaryPassword: string | null; linkSent: boolean }
 const empty: UserForm = { email: '', displayName: '', role: 'Recruiter', sectionIds: [], leaderSectionIds: [] }
 const usersKey = ['users']
 
@@ -29,17 +30,21 @@ export function UsersPage() {
   const [deleting, setDeleting] = useState<User | null>(null)
   const [resetting, setResetting] = useState<User | null>(null)
   const [password, setPassword] = useState<{ user: string; password: string } | null>(null)
+  // E-mail set up → the server e-mails a link instead of returning a temporary password.
+  const linkSent = (email: string, invite: boolean) =>
+    notifySuccess(`${invite ? 'Invitation' : 'Link to set a new password'} e-mailed to ${email}. It works for 3 days.`)
 
   const save = useMutation({
-    mutationFn: (form: UserForm): Promise<User | { user: User; temporaryPassword: string }> =>
+    mutationFn: (form: UserForm): Promise<User | Created> =>
       editing === 'new'
-        ? api<{ user: User; temporaryPassword: string }>('/api/users', { method: 'POST', json: form })
+        ? api<Created>('/api/users', { method: 'POST', json: form })
         : api<User>(`/api/users/${(editing as User).id}`, { method: 'PUT', json: form }),
     onSuccess: (result) => {
       refresh()
       setEditing(null)
-      if (!('temporaryPassword' in result)) notifySuccess('User saved.')
-      if ('temporaryPassword' in result) setPassword({ user: result.user.email, password: result.temporaryPassword })
+      if (!('user' in result)) notifySuccess('User saved.')
+      else if (result.temporaryPassword) setPassword({ user: result.user.email, password: result.temporaryPassword })
+      else linkSent(result.user.email, true)
     },
   })
   const remove = useMutation({
@@ -47,8 +52,12 @@ export function UsersPage() {
     onSuccess: () => (notifySuccess('User deleted.'), refresh(), setDeleting(null)),
   })
   const reset = useMutation({
-    mutationFn: (u: User) => api<{ temporaryPassword: string }>(`/api/users/${u.id}/reset-password`, { method: 'POST' }),
-    onSuccess: (r, u) => (setResetting(null), setPassword({ user: u.email, password: r.temporaryPassword })),
+    mutationFn: (u: User) => api<{ temporaryPassword: string | null }>(`/api/users/${u.id}/reset-password`, { method: 'POST' }),
+    onSuccess: (r, u) => {
+      setResetting(null)
+      if (r.temporaryPassword) setPassword({ user: u.email, password: r.temporaryPassword })
+      else linkSent(u.email, false)
+    },
   })
 
   return (
@@ -152,7 +161,8 @@ export function UsersPage() {
         title="Reset password"
         message={
           <>
-            Generate a new temporary password for <b>{resetting?.displayName}</b>? The old one stops working and they are logged out.
+            Let <b>{resetting?.displayName}</b> set a new password? With e-mail set up they get a link (their current password works until they use it);
+            otherwise you get a temporary password to pass on, and the old one stops working.
           </>
         }
         confirmLabel="Reset"

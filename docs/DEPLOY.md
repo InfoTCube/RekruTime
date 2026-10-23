@@ -16,7 +16,8 @@ paste the compose file into a new stack and fill in its `.env` there.
 
 Log in with `SeedAdmin__Email` / `SeedAdmin__Password`, then change it under *account menu → Change password*. The
 seed admin is created only when no admin exists, so you can clear `SeedAdmin__Password` afterwards. Users created
-by an admin get a temporary password and must set their own at first login.
+by an admin get an e-mail with a link to set their own password (valid 3 days, once) – this needs e-mail and
+`Club__PublicUrl` set up. Without them the admin gets a temporary password to pass on, which must be changed at first login.
 
 ## Exposing it
 

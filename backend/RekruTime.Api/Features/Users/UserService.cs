@@ -1,9 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RekruTime.Api.Common;
 using RekruTime.Api.Data;
+using RekruTime.Api.Features.Email;
 
 namespace RekruTime.Api.Features.Users;
 
@@ -20,12 +24,16 @@ public record UserRequest(
 }
 
 public record UserDto(string Id, string Email, string DisplayName, string Role, int[] SectionIds, int[] LeaderSectionIds);
-public record CreatedUserDto(UserDto User, string TemporaryPassword);
-public record PasswordDto(string TemporaryPassword);
+// TemporaryPassword is set only when e-mail isn't set up; otherwise the user got a link (LinkSent).
+public record CreatedUserDto(UserDto User, string? TemporaryPassword, bool LinkSent);
+public record PasswordDto(string? TemporaryPassword, bool LinkSent);
 
-// ponytail: admin hands out temporary passwords until set-password e-mails replace them (#37).
-public class UserService(AppDbContext db, UserManager<AppUser> users)
+// New members get an e-mail with a link to set their own password (AuthService.SetPasswordAsync). Without e-mail
+// configured the admin hands out a temporary password instead, which must be changed at first login.
+public class UserService(AppDbContext db, UserManager<AppUser> users, IOptions<ClubOptions> club, IOptions<EmailOptions> email)
 {
+    bool CanEmail => email.Value.IsConfigured && club.Value.HasPublicUrl;
+
     public async Task<List<UserDto>> ListAsync()
     {
         var list = await db.Users.OrderBy(u => u.DisplayName)
@@ -46,16 +54,18 @@ public class UserService(AppDbContext db, UserManager<AppUser> users)
 
         await using var tx = await db.Database.BeginTransactionAsync();
         var email = req.Email.Trim();
-        var user = new AppUser { UserName = email, Email = email, EmailConfirmed = true, DisplayName = req.DisplayName.Trim(), MustChangePassword = true };
-        var password = TemporaryPassword();
-        var result = await users.CreateAsync(user, password);
+        var password = CanEmail ? null : TemporaryPassword(); // no password at all until they use the link
+        var user = new AppUser { UserName = email, Email = email, EmailConfirmed = true, DisplayName = req.DisplayName.Trim(), MustChangePassword = password is not null };
+        var result = password is null ? await users.CreateAsync(user) : await users.CreateAsync(user, password);
         if (!result.Succeeded) return IdentityError(result);
         await users.AddToRoleAsync(user, req.Role);
         db.UserSections.AddRange(req.Sections.Select(id => new UserSection { UserId = user.Id, SectionId = id, IsLeader = req.Leads(id) }));
+        if (password is null) await QueueLinkAsync(user, invite: true);
         await db.SaveChangesAsync();
         await tx.CommitAsync();
 
-        return new CreatedUserDto(new UserDto(user.Id, email, user.DisplayName, req.Role, req.Sections, req.Sections.Where(req.Leads).ToArray()), password);
+        return new CreatedUserDto(new UserDto(user.Id, email, user.DisplayName, req.Role, req.Sections, req.Sections.Where(req.Leads).ToArray()),
+            password, LinkSent: password is null);
     }
 
     public async Task<Result<UserDto>> UpdateAsync(string id, UserRequest req, string actingUserId)
@@ -95,11 +105,18 @@ public class UserService(AppDbContext db, UserManager<AppUser> users)
     {
         var user = await users.FindByIdAsync(id);
         if (user is null) return Error.NotFound();
+        if (CanEmail)
+        {
+            // The current password keeps working until the link is used. Never set one yet → the invite again.
+            await QueueLinkAsync(user, invite: user.PasswordHash is null);
+            await db.SaveChangesAsync();
+            return new PasswordDto(null, LinkSent: true);
+        }
         var password = TemporaryPassword();
         var token = await users.GeneratePasswordResetTokenAsync(user);
         user.MustChangePassword = true; // saved by ResetPasswordAsync
         var result = await users.ResetPasswordAsync(user, token, password); // also signs out other sessions (security stamp)
-        return result.Succeeded ? new PasswordDto(password) : IdentityError(result);
+        return result.Succeeded ? new PasswordDto(password, LinkSent: false) : IdentityError(result);
     }
 
     public async Task<Result> DeleteAsync(string id, string actingUserId)
@@ -121,6 +138,15 @@ public class UserService(AppDbContext db, UserManager<AppUser> users)
         var ids = req.Sections;
         if (await db.Sections.CountAsync(s => ids.Contains(s.Id)) != ids.Length) return Error.Validation("SectionIds", "Unknown section.");
         return null;
+    }
+
+    // One-time link with Identity's password-reset token (expires after AccountMails.LinkValidDays). Caller saves.
+    async Task QueueLinkAsync(AppUser user, bool invite)
+    {
+        var token = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(await users.GeneratePasswordResetTokenAsync(user)));
+        var link = $"{club.Value.PublicUrl!.TrimEnd('/')}/set-password?u={Uri.EscapeDataString(user.Id)}&t={token}";
+        var mail = AccountMails.Render(invite, user.DisplayName, link, club.Value.Name);
+        db.EmailMessages.Add(new EmailMessage { To = user.Email!, ToName = user.DisplayName, Subject = mail.Subject, Body = mail.Body, HtmlBody = mail.Html });
     }
 
     // Duplicate email etc. → 409/400 with Identity's message.

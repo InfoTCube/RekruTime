@@ -21,7 +21,8 @@ public class RecruitReviewTests : IAsyncLifetime
         _app = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b
             .UseSetting("ConnectionStrings:Default", _db.GetConnectionString())
             .UseSetting("SeedAdmin:Email", "admin@test.local")
-            .UseSetting("SeedAdmin:Password", "Admin123!"));
+            .UseSetting("SeedAdmin:Password", "Admin123!")
+            .UseSetting("Email:Host", "")); // no e-mail (overrides appsettings.Development) → temporary passwords
     }
 
     public async Task DisposeAsync()
