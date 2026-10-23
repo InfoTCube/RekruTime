@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using RekruTime.Api.Common;
+using RekruTime.Api.Features.Booking;
 
 namespace RekruTime.Api.Features.Auth;
 
@@ -19,6 +20,10 @@ public static class AuthEndpoints
 
         auth.MapPost("/change-password", async (ChangePasswordRequest req, ClaimsPrincipal me, AuthService s) =>
             (await s.ChangePasswordAsync(me.Id(), req)).ToHttp()).RequireAuthorization();
+
+        // Public (the token is the key), rate-limited like the booking endpoints.
+        auth.MapPost("/set-password", async (SetPasswordRequest req, AuthService s) => (await s.SetPasswordAsync(req)).ToHttp())
+            .RequireRateLimiting(PublicBookingEndpoints.RateLimitPolicy);
 
         auth.MapGet("/me", async (ClaimsPrincipal me, AuthService s) => (await s.MeAsync(me.Id())).ToHttp()).RequireAuthorization();
     }

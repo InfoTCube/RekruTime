@@ -100,7 +100,7 @@ Booking link token: 128-bit random, base64url (`RandomNumberGenerator`). Not gue
 
 Auth / users
 - `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
-- `GET/POST/PUT/DELETE /api/users` (Admin) – create user with temp password, set role, assign sections
+- `GET/POST/PUT/DELETE /api/users` (Admin) – create user (set-password e-mail, temp password without e-mail – #37), set role, assign sections
 - `GET/POST/PUT/DELETE /api/sections` (Admin; GET for all logged in)
 
 Recruitment period
@@ -258,7 +258,7 @@ Same visibility as notes: interviewers, leaders of the interview's sections, adm
 | Admin cancels/moves/swaps interviewers (#35, "notify" on by default) | Recruit: `rescheduled` / `cancelled` (with the link to rebook); team: moved / cancelled / added / removed notices. `.ics` with a stable UID updates or cancels the calendar event |
 | Day before (optional) | Reminder |
 | Admin clicks "Send decision" (#36) | Accepted / rejected email – **manual trigger**, never automatic on vote. One per recruit once all their applications are decided: "accepted" (listing accepted sections) if any, else "rejected". Sending locks the votes. Templates `accepted`/`rejected` per language, editable like the invitation |
-| User created | Account invite with set-password link (replaces temp passwords) |
+| User created / admin resets a password (#37) | Link to set the password (`/set-password`, Identity reset token, once, 3 days; logs in). Temp password only when e-mail isn't set up |
 
 ---
 

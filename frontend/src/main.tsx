@@ -23,6 +23,7 @@ import { InterviewsPage } from './pages/InterviewsPage'
 import { LoginPage } from './pages/LoginPage'
 import { RecruitPage } from './pages/RecruitPage'
 import { RecruitsPage } from './pages/RecruitsPage'
+import { SetPasswordPage } from './pages/SetPasswordPage'
 import { theme } from './theme'
 
 const queryClient: QueryClient = new QueryClient({
@@ -38,6 +39,7 @@ const queryClient: QueryClient = new QueryClient({
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/book/:token', element: <BookingPage /> }, // public: outside the login guard
+  { path: '/set-password', element: <SetPasswordPage /> }, // public: link from the account e-mail
   {
     element: <Layout />,
     children: [

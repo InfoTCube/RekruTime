@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RekruTime.Api.Common;
@@ -11,6 +13,7 @@ public record SectionRef(int Id, string Name);
 public record MySection(int Id, string Name, bool IsLeader);
 public record MeResponse(string Id, string Email, string DisplayName, IList<string> Roles, List<MySection> Sections, bool MustChangePassword);
 public record ChangePasswordRequest([Required] string CurrentPassword, [Required, StringLength(128)] string NewPassword);
+public record SetPasswordRequest([Required] string UserId, [Required] string Token, [Required, StringLength(128)] string NewPassword);
 
 public class AuthService(AppDbContext db, UserManager<AppUser> users, SignInManager<AppUser> signIn)
 {
@@ -40,6 +43,31 @@ public class AuthService(AppDbContext db, UserManager<AppUser> users, SignInMana
         await users.UpdateAsync(user);
         await signIn.RefreshSignInAsync(user);
         return Result.Ok;
+    }
+
+    // The link from an invite / reset e-mail: sets the password and logs in. The token works once (new security stamp).
+    public async Task<Result<MeResponse>> SetPasswordAsync(SetPasswordRequest req)
+    {
+        var invalid = Error.Validation("Token", "This link is invalid or has expired. Ask an admin to send you a new one.");
+        if (await users.FindByIdAsync(req.UserId) is not { } user) return invalid;
+        string token;
+        try
+        {
+            token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(req.Token));
+        }
+        catch (FormatException)
+        {
+            return invalid;
+        }
+        var result = await users.ResetPasswordAsync(user, token, req.NewPassword);
+        if (!result.Succeeded)
+            return result.Errors.Any(e => e.Code == "InvalidToken") ? invalid
+                : Error.Validation("NewPassword", string.Join(" ", result.Errors.Select(e => e.Description)));
+        user.MustChangePassword = false;
+        await users.UpdateAsync(user);
+        await users.ResetAccessFailedCountAsync(user);
+        await signIn.SignInAsync(user, isPersistent: true);
+        return await MeAsync(user);
     }
 
     public async Task<Result<MeResponse>> MeAsync(string userId) =>

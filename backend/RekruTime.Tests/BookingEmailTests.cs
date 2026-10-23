@@ -140,16 +140,18 @@ public class BookingEmailTests : IAsyncLifetime
             var user = await Json(admin.PostAsJsonAsync("/api/users", new { email = $"{name.ToLower()}@club.local", displayName = name, role = "Recruiter", sectionIds = new[] { section } }));
             ids[name] = user.GetProperty("user").GetProperty("id").GetString()!;
             var c = _app.CreateClient();
-            await c.PostAsJsonAsync("/api/auth/login", new { email = $"{name.ToLower()}@club.local", password = user.GetProperty("temporaryPassword").GetString() });
+            var (userId, token, _) = await AccountInviteTests.LinkFor(_app, $"{name.ToLower()}@club.local"); // e-mail set up → invite link, not a temp password
+            await Json(c.PostAsJsonAsync("/api/auth/set-password", new { userId, token, newPassword = "Pass123!x" })); // logs in
             await c.PostAsJsonAsync("/api/availability", new { start = day.AddHours(10), end = day.AddHours(14) });
         }
         var link = (await Json(admin.PostAsJsonAsync("/api/booking-links", new { sectionIds = new[] { section }, count = 1 })))[0].GetProperty("token").GetString()!;
         var pub = _app.CreateClient();
         var slot = (await Json(pub.GetAsync($"/api/public/links/{link}/slots")))[0].GetProperty("start").GetDateTime();
 
-        // 1. Booking → recruit confirmation + both interviewers
+        // 1. Booking → recruit confirmation + both interviewers (the account invites before don't count)
+        var invites = (await MailsAfter(0)).Max(m => m.Id);
         await Json(pub.PostAsJsonAsync($"/api/public/links/{link}/bookings", new { start = slot, fullName = "Ewa Nowak", email = "ewa@x.pl", gdprConsent = true }));
-        var mails = await MailsAfter(0);
+        var mails = await MailsAfter(invites);
         var toEwa = Assert.Single(mails, m => m.To == "ewa@x.pl");
         Assert.StartsWith("Potwierdzenie rozmowy rekrutacyjnej", toEwa.Subject);
         Assert.Contains("Miejsce: Sala 101", toEwa.Body);

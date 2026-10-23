@@ -52,6 +52,8 @@ builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Ad
 builder.Services.AddIdentity<AppUser, IdentityRole>(o => o.User.RequireUniqueEmail = true)
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders(); // password reset tokens
+// Invite / new-password links (AccountMails) stay valid this long.
+builder.Services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifespan = TimeSpan.FromDays(RekruTime.Api.Features.Email.AccountMails.LinkValidDays));
 // Re-read roles/sign-out from the DB every minute, so role changes and deleted users take effect quickly.
 builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
 builder.Services.AddAuthorization(o => o.AddPolicy(Roles.Admin, p => p.RequireRole(Roles.Admin)));
