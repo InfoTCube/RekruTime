@@ -1,7 +1,7 @@
 import enGb from '@fullcalendar/core/locales/en-gb'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import { Alert, Anchor, Badge, Button, Group, Modal, MultiSelect, Paper, SegmentedControl, Select, Stack, Text, TextInput } from '@mantine/core'
+import { Alert, Anchor, Badge, Button, Checkbox, Group, Modal, MultiSelect, Paper, SegmentedControl, Select, Stack, Text, TextInput } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -169,6 +169,7 @@ function EditInterview({ interview: i, onDone }: { interview: Interview; onDone:
   const [interviewerIds, setInterviewerIds] = useState(i.interviewers.map((p) => p.id))
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [notify, setNotify] = useState(true)
   const deleteRecruit = useMutation({
     mutationFn: () => api(`/api/recruits/${i.recruit.id}`, { method: 'DELETE' }),
     onSuccess: () => {
@@ -180,7 +181,7 @@ function EditInterview({ interview: i, onDone }: { interview: Interview; onDone:
 
   const update = useMutation({
     mutationFn: (body: { start?: string; interviewerIds?: string[]; status?: InterviewStatus }) =>
-      api(`/api/interviews/${i.id}`, { method: 'PATCH', json: body }),
+      api(`/api/interviews/${i.id}`, { method: 'PATCH', json: { ...body, notify } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: interviewsKey })
       queryClient.invalidateQueries({ queryKey: ['booking-links'] }) // link status changes on cancel
@@ -216,6 +217,11 @@ function EditInterview({ interview: i, onDone }: { interview: Interview; onDone:
             error={fieldError(update.error, 'InterviewerIds')}
             searchable
             required
+          />
+          <Checkbox
+            label="E-mail the recruit and the interviewers about a new time, a cancellation or a new team"
+            checked={notify}
+            onChange={(e) => setNotify(e.currentTarget.checked)}
           />
           <Group justify="space-between">
             <Group gap="xs">
@@ -266,7 +272,8 @@ function EditInterview({ interview: i, onDone }: { interview: Interview; onDone:
         title="Cancel interview"
         message={
           <>
-            Cancel the interview with <b>{i.recruit.fullName}</b>? The time becomes free and their link can be used to book again. Let them know yourself.
+            Cancel the interview with <b>{i.recruit.fullName}</b>? The time becomes free and their link can be used to book again.{' '}
+            {notify ? 'They and the interviewers get an e-mail.' : "Nobody is e-mailed – let them know yourself."}
           </>
         }
         confirmLabel="Cancel interview"

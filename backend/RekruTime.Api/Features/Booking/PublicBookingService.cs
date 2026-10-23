@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using RekruTime.Api.Common;
 using RekruTime.Api.Data;
+using RekruTime.Api.Features.Email;
 
 namespace RekruTime.Api.Features.Booking;
 
@@ -21,7 +22,7 @@ public record BookRequest(
     bool GdprConsent);
 
 // What recruits can do with their link. No login: the unguessable token is the key.
-public class PublicBookingService(AppDbContext db, SlotService slots, IOptions<ClubOptions> club)
+public class PublicBookingService(AppDbContext db, SlotService slots, IOptions<ClubOptions> club, BookingEmailService emails, ILogger<PublicBookingService> log)
 {
     public async Task<Result<PublicLinkDto>> GetLinkAsync(string token)
     {
@@ -87,7 +88,7 @@ public class PublicBookingService(AppDbContext db, SlotService slots, IOptions<C
         foreach (var section in link.Sections.Where(s => !recruit.Applications.Any(a => a.SectionId == s.Id)))
             recruit.Applications.Add(new Application { SectionId = section.Id });
 
-        db.Interviews.Add(new Interview
+        var interview = db.Interviews.Add(new Interview
         {
             Recruit = recruit,
             BookingLinkId = link.Id,
@@ -96,7 +97,7 @@ public class PublicBookingService(AppDbContext db, SlotService slots, IOptions<C
             BlockedUntil = slot.End + buffer,
             Sections = link.Sections,
             Interviewers = await db.Users.Where(u => slot.Team.Contains(u.Id)).ToListAsync(),
-        });
+        }).Entity;
 
         try
         {
@@ -110,6 +111,17 @@ public class PublicBookingService(AppDbContext db, SlotService slots, IOptions<C
         catch (Exception e) when (DbErrors.IsUniqueViolation(e, "IX_Interviews_OneBookingPerLink"))
         {
             return AlreadyBooked;
+        }
+
+        // The booking stands even if queueing the e-mails fails – the recruit already sees it on the page.
+        try
+        {
+            await emails.QueueAsync(interview.Id, InterviewChange.Booked);
+            await db.SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            log.LogError(e, "Booking e-mails for interview {Id} could not be queued", interview.Id);
         }
         return new BookingDto(slot.Start, slot.End);
     }

@@ -42,7 +42,14 @@ public class TemplateService(AppDbContext db, IOptions<ClubOptions> club)
         var sections = await db.Sections.OrderBy(s => s.Name).Select(s => s.Name).Take(2).ToListAsync();
         if (sections.Count == 0) sections = ["AI"];
         var t = new Template(req.Subject, req.Body);
-        if (key != Invitations.Key) return Decisions.Render(t, new DecisionValues("Jan Kowalski", sections, club.Value.ContactEmail), language, club.Value.Name);
+        if (key is Decisions.Accepted or Decisions.Rejected)
+            return Decisions.Render(t, new DecisionValues("Jan Kowalski", sections, club.Value.ContactEmail), language, club.Value.Name);
+        if (key != Invitations.Key)
+        {
+            var start = DateTime.UtcNow.Date.AddDays(7).AddHours(15);
+            return BookingMails.Render(t, new BookingValues("Jan Kowalski", start, start.AddMinutes(30), sections, club.Value.InterviewLocation, club.Value.ContactEmail,
+                club.Value.BookingUrl("AbCdEfGhIjKlMnOpQrStUv")), language, club.Value.Zone, club.Value.Name);
+        }
         var period = await db.RecruitmentSettings.FindAsync(1);
         return Invitations.Render(t, new InvitationValues(
             "Jan Kowalski", club.Value.BookingUrl("AbCdEfGhIjKlMnOpQrStUv"), sections, period?.InterviewsTo, club.Value.ContactEmail), language, club.Value.Name);

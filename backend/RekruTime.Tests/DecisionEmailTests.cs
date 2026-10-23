@@ -134,7 +134,7 @@ public class DecisionEmailTests : IAsyncLifetime
         await admin.PostAsJsonAsync("/api/auth/login", new { email = "admin@test.local", password = "Admin123!" });
 
         var list = await admin.GetFromJsonAsync<JsonElement>("/api/email/templates");
-        Assert.Equal(["accepted", "invitation", "rejected"], list.EnumerateArray().Select(t => t.GetProperty("key").GetString()).Distinct().Order());
+        Assert.Equal(["accepted", "cancelled", "confirmation", "invitation", "rejected", "rescheduled"], list.EnumerateArray().Select(t => t.GetProperty("key").GetString()).Distinct().Order());
 
         // {link} is required only in the invitation
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync("/api/email/templates/accepted/pl", new { subject = "Brawo", body = "Witaj {name}" })).StatusCode);
