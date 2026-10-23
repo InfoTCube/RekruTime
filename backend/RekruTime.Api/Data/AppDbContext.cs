@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<BookingLink> BookingLinks => Set<BookingLink>();
     public DbSet<Recruit> Recruits => Set<Recruit>();
     public DbSet<Application> Applications => Set<Application>();
+    public DbSet<ApplicationVote> ApplicationVotes => Set<ApplicationVote>();
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<InterviewNote> InterviewNotes => Set<InterviewNote>();
     public DbSet<RecruitmentSettings> RecruitmentSettings => Set<RecruitmentSettings>();
@@ -22,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         // Enums as text: readable in SQL, and the overlap constraint filters on 'Cancelled'.
         b.Properties<ApplicationStatus>().HaveConversion<string>();
+        b.Properties<VoteDecision>().HaveConversion<string>();
         b.Properties<InterviewStatus>().HaveConversion<string>();
         b.Properties<EmailStatus>().HaveConversion<string>();
     }
@@ -65,6 +67,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<Application>().HasIndex(a => new { a.RecruitId, a.SectionId }).IsUnique();
         b.Entity<Application>().HasOne<Recruit>().WithMany(r => r.Applications).HasForeignKey(a => a.RecruitId);
         b.Entity<Application>().HasOne(a => a.Section).WithMany().HasForeignKey(a => a.SectionId).OnDelete(DeleteBehavior.Restrict);
+
+        // Votes go with the application (GDPR delete) and with the voter's account.
+        b.Entity<ApplicationVote>().HasOne<Application>().WithMany().HasForeignKey(v => v.ApplicationId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<ApplicationVote>().HasOne(v => v.User).WithMany().HasForeignKey(v => v.UserId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<ApplicationVote>().HasIndex(v => new { v.ApplicationId, v.UserId }).IsUnique();
+        b.Entity<ApplicationVote>().Property(v => v.Comment).HasMaxLength(2000);
 
         b.Entity<Interview>().HasOne<BookingLink>().WithMany().HasForeignKey(i => i.BookingLinkId).OnDelete(DeleteBehavior.SetNull);
         b.Entity<Interview>().HasMany(i => i.Sections).WithMany().UsingEntity("InterviewSections");

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RekruTime.Api.Common;
 using RekruTime.Api.Data;
+using RekruTime.Api.Features.Applications;
 using RekruTime.Api.Features.Auth;
 using RekruTime.Api.Features.Availability;
 using RekruTime.Api.Features.Booking;
@@ -38,6 +39,7 @@ builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<PublicBookingService>();
 builder.Services.AddScoped<InterviewService>();
 builder.Services.AddScoped<NoteService>();
+builder.Services.AddScoped<VoteService>();
 builder.Services.AddScoped<RecruitService>();
 builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<EmailService>();
@@ -102,6 +104,7 @@ app.MapBookingLinkEndpoints();
 app.MapPublicBookingEndpoints();
 app.MapInterviewEndpoints();
 app.MapRecruitEndpoints();
+app.MapApplicationEndpoints();
 app.MapEmailEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html

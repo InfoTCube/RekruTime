@@ -203,7 +203,7 @@ Voters on an application: **leaders of that section** and **admins**.
 - **Rejected** – same, both Reject.
 - **Disputed** – a leader/admin pair split (one Approve, one Reject). Then **another admin** (not one of the voters so far) makes the **final decision**, which sets Accepted/Rejected directly.
 
-Status is recomputed on every vote and stored (simple filtering). Votes can be changed until the status is final.
+Status is recomputed on every vote and stored (simple filtering). Votes can be changed until a final decision is made – so an agreed Accepted/Rejected turns Disputed if another leader/admin votes the other way. Votes of users who are no longer leaders/admins don't count; deleting a user deletes their votes.
 
 ### API / UI
 - `GET/PUT /api/interviews/{id}/notes` – interviewers of that interview write; leaders of its sections + admins read
