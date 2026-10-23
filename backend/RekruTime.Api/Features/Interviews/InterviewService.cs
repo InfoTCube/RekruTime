@@ -12,6 +12,12 @@ public record InterviewDto(int Id, DateTime Start, DateTime End, DateTime Blocke
 
 public record InterviewFilter(DateTimeOffset? From, DateTimeOffset? To, int? SectionId, InterviewStatus? Status);
 
+// What a user may do with one interview: interviewers write notes; they, leaders of its sections and admins read it.
+public record InterviewAccess(bool IsInterviewer, bool IsLeader)
+{
+    public bool CanRead(bool isAdmin) => IsInterviewer || IsLeader || isAdmin;
+}
+
 // All fields optional: cancel / mark done, swap interviewers, move to another time.
 public record UpdateInterviewRequest(InterviewStatus? Status, string[]? InterviewerIds, DateTimeOffset? Start);
 
@@ -28,6 +34,21 @@ public class InterviewService(AppDbContext db)
         if (f.Status is { } st) q = q.Where(i => i.Status == st);
         return Project(q.OrderBy(i => i.Start)).ToListAsync();
     }
+
+    public async Task<Result<InterviewDto>> GetAsync(int id, string userId, bool isAdmin)
+    {
+        var access = await AccessAsync(id, userId);
+        if (access is null) return Error.NotFound();
+        if (!access.CanRead(isAdmin)) return Error.Forbidden("Only the interviewers, section leaders and admins can see this interview.");
+        return await Project(db.Interviews.Where(i => i.Id == id)).SingleAsync();
+    }
+
+    // null = no such interview
+    public Task<InterviewAccess?> AccessAsync(int id, string userId) =>
+        db.Interviews.Where(i => i.Id == id).Select(i => new InterviewAccess(
+            i.Interviewers.Any(u => u.Id == userId),
+            db.UserSections.Any(us => us.UserId == userId && us.IsLeader && i.Sections.Any(s => s.Id == us.SectionId))))
+        .SingleOrDefaultAsync();
 
     public async Task<Result<InterviewDto>> UpdateAsync(int id, UpdateInterviewRequest req)
     {

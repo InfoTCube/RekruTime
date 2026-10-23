@@ -13,6 +13,9 @@ public static class InterviewEndpoints
         group.MapGet("/", (DateTimeOffset? from, DateTimeOffset? to, int? sectionId, InterviewStatus? status, ClaimsPrincipal me, InterviewService s) =>
             s.ListAsync(new InterviewFilter(from, to, sectionId, status), me.IsInRole(Roles.Admin) ? null : me.Id()));
 
+        group.MapGet("/{id:int}", async (int id, ClaimsPrincipal me, InterviewService s) =>
+            (await s.GetAsync(id, me.Id(), me.IsInRole(Roles.Admin))).ToHttp());
+
         group.MapPatch("/{id:int}", async (int id, UpdateInterviewRequest req, InterviewService s) =>
             (await s.UpdateAsync(id, req)).ToHttp()).RequireAuthorization(Roles.Admin);
 

@@ -5,6 +5,7 @@ import { Alert, Anchor, Badge, Button, Group, Modal, MultiSelect, Paper, Segment
 import { useMediaQuery } from '@mantine/hooks'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { api, errorMessage, fieldError } from '../api'
 import { isAdmin, useMe } from '../auth'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -97,20 +98,21 @@ export function InterviewsPage() {
           <Stack key={d} gap="xs">
             <Text fw={600}>{d}</Text>
             {list.map((i) => (
-              <InterviewCard key={i.id} interview={i} admin={admin} onEdit={() => setSelected(i)} />
+              <InterviewCard key={i.id} interview={i} admin={admin} onEdit={() => setSelected(i)} details />
             ))}
           </Stack>
         ))
       )}
 
       <Modal opened={selected !== null} onClose={() => setSelected(null)} title="Interview" size="lg" centered>
-        {selected && (admin ? <EditInterview key={selected.id} interview={selected} onDone={() => setSelected(null)} /> : <InterviewCard interview={selected} admin={false} />)}
+        {selected && (admin ? <EditInterview key={selected.id} interview={selected} onDone={() => setSelected(null)} /> : <InterviewCard interview={selected} admin={false} details />)}
       </Modal>
     </Stack>
   )
 }
 
-function InterviewCard({ interview: i, admin, onEdit }: { interview: Interview; admin: boolean; onEdit?: () => void }) {
+// details = show a link to the interview's own page (notes)
+export function InterviewCard({ interview: i, admin, onEdit, details }: { interview: Interview; admin: boolean; onEdit?: () => void; details?: boolean }) {
   return (
     <Paper withBorder p="sm" opacity={i.status === 'Cancelled' ? 0.6 : 1}>
       <Group justify="space-between" align="flex-start" wrap="nowrap">
@@ -143,11 +145,18 @@ function InterviewCard({ interview: i, admin, onEdit }: { interview: Interview; 
             {i.recruit.discordNickname && ` · Discord: ${i.recruit.discordNickname}`}
           </Text>
         </Stack>
-        {admin && onEdit && (
-          <Button size="xs" variant="subtle" onClick={onEdit}>
-            Edit
-          </Button>
-        )}
+        <Group gap={4} wrap="nowrap">
+          {details && (
+            <Button size="xs" variant="light" component={Link} to={`/interviews/${i.id}`}>
+              Notes
+            </Button>
+          )}
+          {admin && onEdit && (
+            <Button size="xs" variant="subtle" onClick={onEdit}>
+              Edit
+            </Button>
+          )}
+        </Group>
       </Group>
     </Paper>
   )
@@ -182,7 +191,7 @@ function EditInterview({ interview: i, onDone }: { interview: Interview; onDone:
 
   return (
     <Stack>
-      <InterviewCard interview={i} admin={false} />
+      <InterviewCard interview={i} admin={false} details />
       {update.isError && !confirmCancel && <Alert color="red">{errorMessage(update.error)}</Alert>}
       <form
         onSubmit={(e) => {

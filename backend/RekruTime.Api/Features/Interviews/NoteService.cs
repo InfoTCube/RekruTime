@@ -10,13 +10,13 @@ public record NoteDto(string? AuthorId, string AuthorName, string Text, DateTime
 public record NotesDto(bool CanWrite, List<NoteDto> Notes);
 
 // Interviewers write their own note; interviewers, leaders of the interview's sections and admins read all notes.
-public class NoteService(AppDbContext db)
+public class NoteService(AppDbContext db, InterviewService interviews)
 {
     public async Task<Result<NotesDto>> ListAsync(int interviewId, string userId, bool isAdmin)
     {
-        var access = await AccessAsync(interviewId, userId);
+        var access = await interviews.AccessAsync(interviewId, userId);
         if (access is null) return Error.NotFound();
-        if (!access.IsInterviewer && !access.IsLeader && !isAdmin) return Error.Forbidden("Only the interviewers, section leaders and admins can read these notes.");
+        if (!access.CanRead(isAdmin)) return Error.Forbidden("Only the interviewers, section leaders and admins can read these notes.");
 
         var notes = await db.InterviewNotes.Where(n => n.InterviewId == interviewId).OrderBy(n => n.UpdatedAt)
             .Select(n => new NoteDto(n.AuthorId, n.Author != null ? n.Author.DisplayName : "(deleted user)", n.Text, n.UpdatedAt))
@@ -27,7 +27,7 @@ public class NoteService(AppDbContext db)
     // Upsert of the caller's note; blank text deletes it.
     public async Task<Result<NoteDto?>> SaveAsync(int interviewId, string userId, NoteRequest req)
     {
-        var access = await AccessAsync(interviewId, userId);
+        var access = await interviews.AccessAsync(interviewId, userId);
         if (access is null) return Error.NotFound();
         if (!access.IsInterviewer) return Error.Forbidden("Only the interviewers can write notes on this interview.");
 
@@ -54,12 +54,4 @@ public class NoteService(AppDbContext db)
         var author = note.Author?.DisplayName ?? await db.Users.Where(u => u.Id == userId).Select(u => u.DisplayName).SingleAsync();
         return new NoteDto(userId, author, note.Text, note.UpdatedAt);
     }
-
-    record Access(bool IsInterviewer, bool IsLeader);
-
-    Task<Access?> AccessAsync(int interviewId, string userId) =>
-        db.Interviews.Where(i => i.Id == interviewId).Select(i => new Access(
-            i.Interviewers.Any(u => u.Id == userId),
-            db.UserSections.Any(us => us.UserId == userId && us.IsLeader && i.Sections.Any(s => s.Id == us.SectionId))))
-        .SingleOrDefaultAsync();
 }

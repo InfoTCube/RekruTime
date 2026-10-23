@@ -92,7 +92,12 @@ public class InterviewNoteTests : IAsyncLifetime
             Assert.Equal(HttpStatusCode.Forbidden, (await reader.PutAsJsonAsync(url, new { text = "x" })).StatusCode);
         }
         foreach (var stranger in new[] { webLeader, outsider })
+        {
             Assert.Equal(HttpStatusCode.Forbidden, (await stranger.GetAsync(url)).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await stranger.GetAsync($"/api/interviews/{interviewId}")).StatusCode);
+        }
+        foreach (var reader in new[] { interviewer, aiLeader, admin }) // the interview itself: same readers as the notes
+            Assert.Equal("Kasia", (await reader.GetFromJsonAsync<JsonElement>($"/api/interviews/{interviewId}")).GetProperty("recruit").GetProperty("fullName").GetString());
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync("/api/interviews/999999/notes")).StatusCode);
 
         // The note outlives its author's account.

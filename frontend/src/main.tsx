@@ -18,6 +18,7 @@ import { SectionsPage } from './pages/admin/SectionsPage'
 import { UsersPage } from './pages/admin/UsersPage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
 import { BookingPage } from './pages/BookingPage'
+import { InterviewPage } from './pages/InterviewPage'
 import { InterviewsPage } from './pages/InterviewsPage'
 import { LoginPage } from './pages/LoginPage'
 import { theme } from './theme'
@@ -42,6 +43,7 @@ const router = createBrowserRouter([
       { element: <RequireAdmin />, children: [{ path: 'overview', element: <OverviewPage /> }] },
       { path: 'availability', element: <AvailabilityPage /> },
       { path: 'interviews', element: <InterviewsPage /> },
+      { path: 'interviews/:id', element: <InterviewPage /> },
       {
         path: 'admin',
         element: <RequireAdmin />,
