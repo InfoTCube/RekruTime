@@ -13,6 +13,7 @@ import {
   IconMail,
   IconMoon,
   IconSun,
+  IconUserCheck,
   IconUsers,
   type Icon,
 } from '@tabler/icons-react'
@@ -21,6 +22,7 @@ import { useState } from 'react'
 import { Navigate, Outlet, NavLink as RouterLink, useLocation } from 'react-router'
 import { api } from './api'
 import { isAdmin, meKey, useMe } from './auth'
+import { isReviewer } from './recruits'
 import { ChangePasswordForm } from './components/ChangePasswordForm'
 import { Logo } from './components/Logo'
 
@@ -30,6 +32,7 @@ const nav: { label?: string; admin?: boolean; items: Item[] }[] = [
     items: [
       { to: '/overview', label: 'Overview', icon: IconLayoutDashboard },
       { to: '/interviews', label: 'Interviews', icon: IconCalendarEvent },
+      { to: '/recruits', label: 'Recruits', icon: IconUserCheck },
       { to: '/availability', label: 'My availability', icon: IconClockHour4 },
     ],
   },
@@ -165,7 +168,7 @@ export function Layout() {
                     </Text>
                   )}
                   {g.items
-                    .filter((n) => admin || n.to !== '/overview')
+                    .filter((n) => (n.to === '/overview' ? admin : n.to === '/recruits' ? isReviewer(me.data) : true))
                     .map((n) => (
                       <NavLink key={n.to} component={RouterLink} to={n.to} label={n.label} leftSection={<n.icon size={18} stroke={1.6} />} onClick={close} style={{ borderRadius: 'var(--mantine-radius-md)' }} />
                     ))}
@@ -187,6 +190,12 @@ export function Layout() {
 export function RequireAdmin() {
   const me = useMe()
   return isAdmin(me.data) ? <Outlet /> : <Navigate to="/" replace />
+}
+
+// Admins and section leaders.
+export function RequireReviewer() {
+  const me = useMe()
+  return isReviewer(me.data) ? <Outlet /> : <Navigate to="/" replace />
 }
 
 // Admins land on the overview, recruiters on their interviews.

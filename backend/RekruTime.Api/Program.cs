@@ -41,6 +41,7 @@ builder.Services.AddScoped<InterviewService>();
 builder.Services.AddScoped<NoteService>();
 builder.Services.AddScoped<VoteService>();
 builder.Services.AddScoped<RecruitService>();
+builder.Services.AddScoped<RecruitReviewService>();
 builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));

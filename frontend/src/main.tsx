@@ -8,7 +8,7 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
 import { ApiError } from './api'
 import { meKey } from './auth'
-import { Home, Layout, RequireAdmin } from './Layout'
+import { Home, Layout, RequireAdmin, RequireReviewer } from './Layout'
 import { EmailPage } from './pages/admin/EmailPage'
 import { ImportPage } from './pages/admin/ImportPage'
 import { LinksPage } from './pages/admin/LinksPage'
@@ -21,6 +21,8 @@ import { BookingPage } from './pages/BookingPage'
 import { InterviewPage } from './pages/InterviewPage'
 import { InterviewsPage } from './pages/InterviewsPage'
 import { LoginPage } from './pages/LoginPage'
+import { RecruitPage } from './pages/RecruitPage'
+import { RecruitsPage } from './pages/RecruitsPage'
 import { theme } from './theme'
 
 const queryClient: QueryClient = new QueryClient({
@@ -44,6 +46,13 @@ const router = createBrowserRouter([
       { path: 'availability', element: <AvailabilityPage /> },
       { path: 'interviews', element: <InterviewsPage /> },
       { path: 'interviews/:id', element: <InterviewPage /> },
+      {
+        element: <RequireReviewer />,
+        children: [
+          { path: 'recruits', element: <RecruitsPage /> },
+          { path: 'recruits/:id', element: <RecruitPage /> },
+        ],
+      },
       {
         path: 'admin',
         element: <RequireAdmin />,
