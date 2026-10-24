@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using RekruTime.Api.Common;
+using RekruTime.Api.Data;
 
 namespace RekruTime.Api.Features.Availability;
 
@@ -9,8 +10,11 @@ public static class AvailabilityEndpoints
     {
         var group = app.MapGroup("/api/availability").WithTags("Availability").RequireAuthorization();
 
-        group.MapGet("/", async (DateTimeOffset from, DateTimeOffset to, ClaimsPrincipal me, AvailabilityService s) =>
-            (await s.ListAsync(me.Id(), from, to)).ToHttp());
+        // userId: admins may look at anyone's (read-only) – who filled it in, and when people can interview.
+        group.MapGet("/", async (DateTimeOffset from, DateTimeOffset to, string? userId, ClaimsPrincipal me, AvailabilityService s) =>
+            userId is not null && userId != me.Id() && !me.IsInRole(Roles.Admin)
+                ? Error.Forbidden("Only admins can see other people's availability.").ToHttp()
+                : (await s.ListAsync(userId ?? me.Id(), from, to)).ToHttp());
 
         group.MapPost("/", async (RangeRequest req, ClaimsPrincipal me, AvailabilityService s) =>
             (await s.AddAsync(me.Id(), req)).ToHttp());

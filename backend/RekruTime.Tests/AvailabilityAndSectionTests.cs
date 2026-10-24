@@ -36,6 +36,26 @@ public class AvailabilityTests : IntegrationTest
     }
 
     [Fact]
+    public async Task Admins_see_who_filled_in_availability_and_what()
+    {
+        var admin = await App.AdminAsync();
+        var ala = await App.UserAsync(admin, "Ala");
+        var ola = await App.UserAsync(admin, "Ola");
+        await Json(Add(ala.Client, 10, 13));
+        await Json(Add(ala.Client, 15, 16));
+
+        var users = (await Json(admin.GetAsync("/api/users"))).EnumerateArray()
+            .ToDictionary(u => u.GetProperty("id").GetString()!, u => u.GetProperty("availableHours").GetDouble());
+        Assert.Equal(4, users[ala.Id]);
+        Assert.Equal(0, users[ola.Id]); // hasn't filled it in
+
+        var url = $"/api/availability?from={Day:O}&to={Day.AddDays(1):O}&userId={ala.Id}";
+        Assert.Equal(2, (await Json(admin.GetAsync(url))).GetArrayLength());
+        Assert.Equal(HttpStatusCode.Forbidden, await Status(ola.Client.GetAsync(url))); // members only see their own
+        Assert.Equal(HttpStatusCode.OK, await Status(ala.Client.GetAsync(url)));
+    }
+
+    [Fact]
     public async Task Invalid_ranges_are_rejected()
     {
         var me = await App.AdminAsync();

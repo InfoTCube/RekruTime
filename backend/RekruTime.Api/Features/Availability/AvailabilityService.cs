@@ -8,7 +8,7 @@ namespace RekruTime.Api.Features.Availability;
 public record RangeRequest(DateTimeOffset Start, DateTimeOffset End);
 public record AvailabilityDto(int Id, DateTime Start, DateTime End);
 
-// Each user (recruiter or admin) manages only their own availability.
+// Each user (recruiter or admin) manages only their own availability; admins can view anyone's.
 public class AvailabilityService(AppDbContext db)
 {
     static readonly TimeSpan MaxQueryRange = TimeSpan.FromDays(62);

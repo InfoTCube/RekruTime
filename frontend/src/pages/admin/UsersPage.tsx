@@ -1,6 +1,7 @@
-import { ActionIcon, Alert, Badge, Button, Code, CopyButton, Group, Modal, MultiSelect, SegmentedControl, Stack, Table, Text, TextInput } from '@mantine/core'
+import { ActionIcon, Alert, Anchor, Badge, Button, Code, CopyButton, Group, Modal, MultiSelect, SegmentedControl, Stack, Table, Text, TextInput } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { api, errorMessage, fieldError } from '../../api'
 import { useMe } from '../../auth'
 import { ConfirmModal } from '../../components/ConfirmModal'
@@ -9,8 +10,8 @@ import { notifySuccess } from '../../notify'
 import { IconPlus, IconTrash } from '@tabler/icons-react'
 import { useSections } from '../../sections'
 
-type User = { id: string; email: string; displayName: string; role: 'Admin' | 'Recruiter'; sectionIds: number[]; leaderSectionIds: number[] }
-type UserForm = Omit<User, 'id'>
+type User = { id: string; email: string; displayName: string; role: 'Admin' | 'Recruiter'; sectionIds: number[]; leaderSectionIds: number[]; availableHours: number }
+type UserForm = Omit<User, 'id' | 'availableHours'>
 type Created = { user: User; temporaryPassword: string | null; linkSent: boolean }
 const empty: UserForm = { email: '', displayName: '', role: 'Recruiter', sectionIds: [], leaderSectionIds: [] }
 const usersKey = ['users']
@@ -79,6 +80,7 @@ export function UsersPage() {
                 <Table.Th>Email</Table.Th>
                 <Table.Th>Role</Table.Th>
                 <Table.Th>Sections</Table.Th>
+                <Table.Th>Availability</Table.Th>
                 <Table.Th />
               </Table.Tr>
             </Table.Thead>
@@ -105,6 +107,14 @@ export function UsersPage() {
                           </Badge>
                         ))}
                       </Group>
+                    </Table.Td>
+                    <Table.Td>
+                      {/* Upcoming hours – opens their calendar */}
+                      <Anchor component={Link} to={`/availability?user=${u.id}`} underline="never">
+                        <Badge variant="light" color={u.availableHours > 0 ? 'signal' : 'red'}>
+                          {u.availableHours > 0 ? `${u.availableHours} h` : 'Not filled'}
+                        </Badge>
+                      </Anchor>
                     </Table.Td>
                     <Table.Td>
                       <Group gap="xs" justify="flex-end" wrap="nowrap">
