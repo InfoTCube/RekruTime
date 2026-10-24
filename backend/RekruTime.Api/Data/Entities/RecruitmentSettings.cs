@@ -6,5 +6,6 @@ public class RecruitmentSettings
     public int Id { get; set; } = 1;
     public DateOnly? InterviewsFrom { get; set; }
     public DateOnly? InterviewsTo { get; set; }
+    public int MinNoticeHours { get; set; } = 12; // recruits can't book a slot starting sooner than this
     public bool RemindersEnabled { get; set; } // day-before e-mail to recruits (ReminderJob); off until an admin turns it on
 }

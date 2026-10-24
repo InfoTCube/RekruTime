@@ -11,9 +11,6 @@ public record SectionCapacityDto(int SectionId, string Name, int Green, int With
 // Loads everything SlotCalculator needs for a set of sections. Shared by the admin preview and public booking.
 public class SlotService(AppDbContext db, IOptions<ClubOptions> club)
 {
-    // ponytail: constant; make it a setting if the board wants to change it.
-    public static readonly TimeSpan MinNotice = TimeSpan.FromHours(12);
-
     // Overview dashboard: remaining capacity of each section for the rest of the recruitment period.
     public async Task<List<SectionCapacityDto>> CapacityAsync()
     {
@@ -36,7 +33,7 @@ public class SlotService(AppDbContext db, IOptions<ClubOptions> club)
         var period = await db.RecruitmentSettings.FindAsync(1);
         if (period is not { InterviewsFrom: { } pFrom, InterviewsTo: { } pTo }) return null;
         var zone = club.Value.Zone;
-        from = new[] { from, TimeZoneInfo.ConvertTimeToUtc(pFrom.ToDateTime(TimeOnly.MinValue), zone), DateTime.UtcNow + MinNotice }.Max();
+        from = new[] { from, TimeZoneInfo.ConvertTimeToUtc(pFrom.ToDateTime(TimeOnly.MinValue), zone), DateTime.UtcNow.AddHours(period.MinNoticeHours) }.Max();
         to = new[] { to, TimeZoneInfo.ConvertTimeToUtc(pTo.AddDays(1).ToDateTime(TimeOnly.MinValue), zone) }.Min();
         if (from >= to) return null;
 

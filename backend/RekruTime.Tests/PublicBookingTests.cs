@@ -57,6 +57,25 @@ public class PublicBookingTests() : IntegrationTest(new Dictionary<string, strin
     }
 
     [Fact]
+    public async Task Notice_is_set_by_the_admin()
+    {
+        var setup = await Booking.FullSetupAsync(App, linkCount: 1); // recruiters free 3 days from now
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        Assert.Equal(12, (await Json(setup.Admin.GetAsync("/api/settings/recruitment"))).GetProperty("minNoticeHours").GetInt32()); // default
+        Task<HttpResponseMessage> Notice(int hours) => setup.Admin.PutAsJsonAsync("/api/settings/recruitment",
+            new { interviewsFrom = today, interviewsTo = today.AddDays(10), minNoticeHours = hours });
+
+        await Json(Notice(336)); // two weeks ahead → the free day is too soon
+        Assert.Empty(await Booking.SlotsAsync(App, setup.Links[0]));
+        Assert.Equal(HttpStatusCode.Conflict, await Booking.BookAsync(App, setup.Links[0], setup.FirstSlot, "a@x.pl"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, await Status(Notice(-1)));
+        Assert.Equal(HttpStatusCode.BadRequest, await Status(Notice(337)));
+        await Json(Notice(0));
+        Assert.Equal(setup.FirstSlot, (await Booking.SlotsAsync(App, setup.Links[0])).First());
+    }
+
+    [Fact]
     public async Task Times_respect_the_period_and_the_notice()
     {
         var setup = await Booking.FullSetupAsync(App, linkCount: 1);

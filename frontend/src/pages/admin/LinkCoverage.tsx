@@ -35,7 +35,7 @@ export function LinkCoverage({ linkId }: { linkId: number }) {
   return (
     <Stack gap="md">
       <Text size="sm" c="dimmed">
-        {green} green and {slots.data.length - green} yellow start times (from 12 h ahead). Hover a time to see who would interview.
+        {green} green and {slots.data.length - green} yellow start times (from {period.data?.minNoticeHours ?? 12} h ahead). Hover a time to see who would interview.
       </Text>
       {[...days].map(([day, daySlots]) => (
         <Stack key={day} gap={4}>

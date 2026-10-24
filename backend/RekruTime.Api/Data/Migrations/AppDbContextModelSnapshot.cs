@@ -634,6 +634,9 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<DateOnly?>("InterviewsTo")
                         .HasColumnType("date");
 
+                    b.Property<int>("MinNoticeHours")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("RemindersEnabled")
                         .HasColumnType("boolean");
 

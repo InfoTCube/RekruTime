@@ -45,7 +45,7 @@ public class ConcurrentBookingTests : IntegrationTest
 }
 
 // A bookable setup through the API: section, two recruiters free 10:00–14:00 UTC three days from now
-// (beyond the 12 h notice), the recruitment period around it, N anonymous links.
+// (beyond the default 12 h notice), the recruitment period around it, N anonymous links.
 public static class Booking
 {
     public record Setup(List<string> Links, DateTime FirstSlot, int SectionId, HttpClient Admin, TestApp.User[] Recruiters);

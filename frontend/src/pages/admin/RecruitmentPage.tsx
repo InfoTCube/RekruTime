@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Paper, Skeleton, Stack, Text, TextInput } from '@mantine/core'
+import { Alert, Button, Group, NumberInput, Paper, Skeleton, Stack, Text, TextInput } from '@mantine/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { api, errorMessage } from '../../api'
@@ -13,7 +13,7 @@ export function RecruitmentPage() {
       <PageHeader title="Recruitment period" description="Interviews can only be booked for days in this period. Recruiters see only these weeks in their availability calendar." />
       {period.isPending && <Skeleton height={160} />}
       {period.isError && <Alert color="red">{errorMessage(period.error)}</Alert>}
-      {period.data && <PeriodForm key={`${period.data.interviewsFrom}-${period.data.interviewsTo}`} initial={period.data} />}
+      {period.data && <PeriodForm key={`${period.data.interviewsFrom}-${period.data.interviewsTo}-${period.data.minNoticeHours}`} initial={period.data} />}
       <PurgeRecruitData />
     </Stack>
   )
@@ -23,6 +23,8 @@ function PeriodForm({ initial }: { initial: RecruitmentPeriod }) {
   const queryClient = useQueryClient()
   const [from, setFrom] = useState(initial.interviewsFrom ?? '')
   const [to, setTo] = useState(initial.interviewsTo ?? '')
+  const [notice, setNotice] = useState<number | string>(initial.minNoticeHours)
+  const minNoticeHours = Number(notice) || 0
   const save = useMutation({
     mutationFn: (p: RecruitmentPeriod) => api<RecruitmentPeriod>('/api/settings/recruitment', { method: 'PUT', json: p }),
     onSuccess: (p) => {
@@ -37,7 +39,7 @@ function PeriodForm({ initial }: { initial: RecruitmentPeriod }) {
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          save.mutate({ interviewsFrom: from, interviewsTo: to })
+          save.mutate({ interviewsFrom: from, interviewsTo: to, minNoticeHours })
         }}
       >
         <Stack>
@@ -53,9 +55,18 @@ function PeriodForm({ initial }: { initial: RecruitmentPeriod }) {
             <TextInput type="date" label="First interview day" required value={from} onChange={(e) => setFrom(e.currentTarget.value)} />
             <TextInput type="date" label="Last interview day" required min={from || undefined} value={to} onChange={(e) => setTo(e.currentTarget.value)} />
           </Group>
+          <NumberInput
+            label="Minimum notice (hours)"
+            description="Recruits can't book a time that starts sooner than this – gives interviewers time to notice. 0 = up to the last moment."
+            min={0}
+            max={336}
+            allowDecimal={false}
+            value={notice}
+            onChange={setNotice}
+          />
           <Group justify="flex-end">
             {isOpen && (
-              <Button variant="default" loading={save.isPending && !save.variables?.interviewsFrom} onClick={() => save.mutate({ interviewsFrom: null, interviewsTo: null })}>
+              <Button variant="default" loading={save.isPending && !save.variables?.interviewsFrom} onClick={() => save.mutate({ interviewsFrom: null, interviewsTo: null, minNoticeHours })}>
                 Close booking
               </Button>
             )}

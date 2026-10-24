@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from './api'
 
 // Dates as "YYYY-MM-DD" in the club time zone, both inclusive; null = booking closed.
-export type RecruitmentPeriod = { interviewsFrom: string | null; interviewsTo: string | null }
+// minNoticeHours: recruits can't book a time starting sooner than this.
+export type RecruitmentPeriod = { interviewsFrom: string | null; interviewsTo: string | null; minNoticeHours: number }
 
 export const recruitmentKey = ['settings', 'recruitment']
 
