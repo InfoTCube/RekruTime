@@ -11,10 +11,13 @@ export class ApiError extends Error {
   }
 }
 
-// Same-origin in prod, Vite proxy in dev, so paths are always relative ("/api/...").
+// Where the app lives on the server: "" or a sub-path like "/rekrutacja" – the backend sets it in <base href>.
+export const basePath = new URL(document.baseURI).pathname.replace(/\/$/, '')
+
+// Same-origin in prod, Vite proxy in dev; paths are written from the app root ("/api/...").
 export async function api<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   const { json, ...rest } = init ?? {}
-  const res = await fetch(path, {
+  const res = await fetch(basePath + path, {
     ...rest,
     credentials: 'include',
     headers: json === undefined ? rest.headers : { 'Content-Type': 'application/json', ...rest.headers },

@@ -1,7 +1,7 @@
 import { Alert, Badge, Button, Checkbox, CopyButton, Group, Modal, MultiSelect, NumberInput, SegmentedControl, Select, Stack, Table, Text, Textarea, TextInput, Tooltip } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { api, errorMessage, fieldError } from '../../api'
+import { api, basePath, errorMessage, fieldError } from '../../api'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { EmptyState, PageHeader, TableSkeleton } from '../../components/Page'
 import { notifySuccess } from '../../notify'
@@ -28,7 +28,7 @@ type Link = {
 
 const linksKey = ['booking-links']
 const statusColor: Record<Status, string> = { Unused: 'cortex', Booked: 'signal', Expired: 'gray', Inactive: 'red' }
-const fullUrl = (l: Link) => window.location.origin + l.url
+const fullUrl = (l: Link) => window.location.origin + basePath + l.url
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 const who = (l: Link) => l.label ?? l.recruitEmail ?? 'Anonymous'
 // Invitations go to the recruit's e-mail, only while the link can still be used.

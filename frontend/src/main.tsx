@@ -6,7 +6,7 @@ import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-qu
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router'
-import { ApiError } from './api'
+import { ApiError, basePath } from './api'
 import { meKey } from './auth'
 import { Home, Layout, RequireAdmin, RequireReviewer } from './Layout'
 import { EmailPage } from './pages/admin/EmailPage'
@@ -70,7 +70,7 @@ const router = createBrowserRouter([
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },
-])
+], { basename: basePath || '/' })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
