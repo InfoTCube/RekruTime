@@ -31,6 +31,18 @@ at `Club__PublicUrl`.
 - **Existing proxy / tunnel** (nginx, Traefik, Cloudflare Tunnel, …): point it at `http://127.0.0.1:8080` and make
   sure it sends `X-Forwarded-For` and `X-Forwarded-Proto` (Caddy, Traefik and cloudflared do by default; nginx needs
   `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; proxy_set_header X-Forwarded-Proto $scheme;`).
+- **Under a path of an existing site** (no free subdomain, e.g. `https://kolo.pl/rekrutacja`): set `Club__PublicUrl`
+  to that address – the app takes its path from it. Forward the path **unchanged** (no trailing `/` after the port
+  in `proxy_pass`), e.g. inside the site's nginx `server { … }` block:
+  ```nginx
+  location = /rekrutacja { return 301 /rekrutacja/; }
+  location /rekrutacja/ {
+      proxy_pass http://127.0.0.1:8080;
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+  }
+  ```
 - **Server only reachable through Tailscale** (no public IP / open ports): use [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) –
   see below.
 

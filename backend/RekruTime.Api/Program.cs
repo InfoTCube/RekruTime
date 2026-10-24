@@ -93,8 +93,12 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference(); // /scalar
 }
 
+// Served under a sub-path when Club:PublicUrl has one (https://kolo.pl/rekrutacja → /rekrutacja); the proxy passes it on.
+var pathBase = Uri.TryCreate(app.Configuration["Club:PublicUrl"], UriKind.Absolute, out var publicUrl) ? publicUrl.AbsolutePath.TrimEnd('/') : "";
+if (pathBase.Length > 0) app.UsePathBase(pathBase);
+app.UseRouting(); // after UsePathBase, so routes match without the prefix
+
 // SPA from wwwroot (copied in by the Dockerfile; absent in dev, where Vite serves it)
-app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseAuthentication();
@@ -116,7 +120,12 @@ app.MapApplicationEndpoints();
 app.MapEmailEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
-app.MapFallbackToFile("index.html");                        // client-side routes
+// Client-side routes: index.html with <base href> = path base – assets, API calls and the router are relative to it.
+if (app.Environment.WebRootFileProvider.GetFileInfo("index.html") is { Exists: true, PhysicalPath: { } indexPath })
+{
+    var index = File.ReadAllText(indexPath).Replace("<base href=\"/\"", $"<base href=\"{pathBase}/\"");
+    app.MapFallback(() => Results.Content(index, "text/html"));
+}
 
 app.Run();
 
