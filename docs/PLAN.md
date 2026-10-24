@@ -131,7 +131,7 @@ Interviews
 ### 1.4 Slot algorithm (`SlotCalculator`, pure function → unit tested)
 
 ```
-input: sections S, duration D, buffer B, range [from,to] ∩ recruitment period, step = 15 min, minNotice (e.g. 12h)
+input: sections S, duration D, buffer B, range [from,to] ∩ recruitment period, step = 15 min, minNotice (setting on the Recruitment period page, default 12 h)
 people   = relevant users for S with their section sets + isAdmin
 blocks   = merged availability per person in range
 busy     = scheduled interviews in range, as [Start, BlockedUntil)

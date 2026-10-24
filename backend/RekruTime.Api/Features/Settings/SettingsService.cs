@@ -1,9 +1,11 @@
+using System.ComponentModel.DataAnnotations;
 using RekruTime.Api.Common;
 using RekruTime.Api.Data;
 
 namespace RekruTime.Api.Features.Settings;
 
-public record RecruitmentPeriodDto(DateOnly? InterviewsFrom, DateOnly? InterviewsTo);
+// MinNoticeHours: how far ahead recruits must book (0 = up to the last moment, max. 2 weeks).
+public record RecruitmentPeriodDto(DateOnly? InterviewsFrom, DateOnly? InterviewsTo, [Range(0, 336)] int MinNoticeHours = 12);
 public record RemindersDto(bool Enabled);
 
 public class SettingsService(AppDbContext db)
@@ -11,7 +13,7 @@ public class SettingsService(AppDbContext db)
     public async Task<RecruitmentPeriodDto> GetPeriodAsync()
     {
         var s = await db.RecruitmentSettings.FindAsync(1);
-        return new(s?.InterviewsFrom, s?.InterviewsTo);
+        return new(s?.InterviewsFrom, s?.InterviewsTo, s?.MinNoticeHours ?? 12);
     }
 
     // Both dates set → booking open for that period; both null → booking closed.
@@ -22,7 +24,7 @@ public class SettingsService(AppDbContext db)
 
         var s = await db.RecruitmentSettings.FindAsync(1);
         if (s is null) db.RecruitmentSettings.Add(s = new RecruitmentSettings());
-        (s.InterviewsFrom, s.InterviewsTo) = (req.InterviewsFrom, req.InterviewsTo);
+        (s.InterviewsFrom, s.InterviewsTo, s.MinNoticeHours) = (req.InterviewsFrom, req.InterviewsTo, req.MinNoticeHours);
         await db.SaveChangesAsync();
         return req;
     }
