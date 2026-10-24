@@ -23,7 +23,8 @@ public record UserRequest(
     public bool Leads(int sectionId) => LeaderSectionIds?.Contains(sectionId) == true;
 }
 
-public record UserDto(string Id, string Email, string DisplayName, string Role, int[] SectionIds, int[] LeaderSectionIds);
+// AvailableHours: availability from now on – 0 = hasn't filled it in (yet).
+public record UserDto(string Id, string Email, string DisplayName, string Role, int[] SectionIds, int[] LeaderSectionIds, double AvailableHours = 0);
 // TemporaryPassword is set only when e-mail isn't set up; otherwise the user got a link (LinkSent).
 public record CreatedUserDto(UserDto User, string? TemporaryPassword, bool LinkSent);
 public record PasswordDto(string? TemporaryPassword, bool LinkSent);
@@ -45,7 +46,12 @@ public class UserService(AppDbContext db, UserManager<AppUser> users, IOptions<C
                 LeaderSectionIds = u.Sections.Where(s => s.IsLeader).Select(s => s.SectionId).ToArray(),
             })
             .ToListAsync();
-        return list.Select(u => new UserDto(u.Id, u.Email!, u.DisplayName, u.Role ?? "", u.SectionIds, u.LeaderSectionIds)).ToList();
+        var now = DateTime.UtcNow;
+        var hours = (await db.Availabilities.Where(a => a.End > now).Select(a => new { a.UserId, a.Start, a.End }).ToListAsync())
+            .GroupBy(a => a.UserId)
+            .ToDictionary(g => g.Key, g => Math.Round(g.Sum(a => (a.End - (a.Start > now ? a.Start : now)).TotalHours), 1));
+        return list.Select(u => new UserDto(u.Id, u.Email!, u.DisplayName, u.Role ?? "", u.SectionIds, u.LeaderSectionIds,
+            hours.GetValueOrDefault(u.Id))).ToList();
     }
 
     public async Task<Result<CreatedUserDto>> CreateAsync(UserRequest req)
