@@ -143,6 +143,11 @@ for t in [max(from, now+minNotice), to - D - B] step 15min:
 ```
 Same function is used by the booking endpoint to validate + pick the team, so preview, public view and booking can't disagree.
 
+**Suggested slots (#110)** – so interviewers travel once and do several interviews in a row:
+- A green slot is *suggested* when it sits next to a scheduled interview on the same day (starts when that interview's block ends or ends when the next one starts, gap ≤ 30 min) and its team includes at least one interviewer of that interview.
+- `findTeam` tie-break: people who already have an interview that day first, then fewest assigned interviews, then id.
+- Booking page lists suggested times first ("Suggested times"), other green times below, yellow still behind the toggle. Only green slots are suggested; an empty day has none. Always on.
+
 Unit tests (the one place to test hard): single section 2 recruiters; admin + recruiter; admin from other section + nobody from section (none); two sections one person each; person in both sections alone (yellow); interview blocks slot for all sections; buffer blocks the following slot; adjacent blocks merge; duration longer than block; DST day.
 
 ### 1.5 Frontend pages
