@@ -568,6 +568,11 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<int>("FormId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
                     b.Property<int>("RecruitId")
                         .HasColumnType("integer");
 
@@ -966,11 +971,13 @@ namespace RekruTime.Api.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("RekruTime.Api.Data.Recruit", null)
+                    b.HasOne("RekruTime.Api.Data.Recruit", "Recruit")
                         .WithMany()
                         .HasForeignKey("RecruitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Recruit");
                 });
 
             modelBuilder.Entity("RekruTime.Api.Data.Interview", b =>

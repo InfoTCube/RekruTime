@@ -46,4 +46,19 @@ export const en: Dictionary = {
   invalidDiscord: 'The nickname is too long (max 50 characters).',
   invalidPhone: 'The number is too long.',
   somethingWrong: 'Something went wrong. Please try again.',
+  // Recruitment form (/form/:id)
+  formPageTitle: 'Recruitment form',
+  formNotFound: "This form doesn't exist",
+  formClosed: 'This form is closed',
+  formProblemHelp: 'If you have questions, write to us at',
+  submit: 'Send application',
+  editAnswers: 'Change my answers',
+  submitted: 'Thank you! Your application has been sent.',
+  submittedNote: "We'll e-mail you about the next steps. To change anything, just send the form again – we'll keep your new answers.",
+  requiredAnswer: 'Please answer this question.',
+  invalidAnswer: 'Please check this answer.',
+  formPrivacy: (contact: string | null) =>
+    `We use your name, e-mail and answers only for this recruitment. ` +
+    `Only the recruitment team can see them. We delete them after the recruitment ends. You can ask us to see, correct or delete your data at any time` +
+    `${contact ? ` by writing to ${contact}` : ''}. Agreeing is voluntary, but we can't accept your application without it.`,
 }

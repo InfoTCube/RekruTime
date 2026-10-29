@@ -1,12 +1,12 @@
-import { Alert, Anchor, Badge, Box, Button, Checkbox, Collapse, Container, Group, Paper, ScrollArea, SegmentedControl, SimpleGrid, Skeleton, Stack, Switch, Text, TextInput, ThemeIcon, Title } from '@mantine/core'
+import { Alert, Anchor, Badge, Button, Checkbox, Collapse, Container, Group, Paper, ScrollArea, SimpleGrid, Skeleton, Stack, Switch, Text, TextInput, ThemeIcon, Title } from '@mantine/core'
 import { IconCheck, IconClock, IconMapPin } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import { useParams } from 'react-router'
 import { api, ApiError, fieldError } from '../api'
-import { LogoMark } from '../components/Logo'
-import { SignalTrace } from '../components/SignalTrace'
+import { PublicHeader } from '../components/PublicPage'
 import { defaultLanguage, dictionaries, type Dictionary } from '../locales'
+import { usePublicLanguage } from '../publicLanguage'
 import { slotColor } from '../theme'
 
 type LinkInfo = {
@@ -25,6 +25,7 @@ type LinkInfo = {
 type Slot = { start: string; end: string; color: 'Green' | 'Yellow' }
 
 const T = createContext<Dictionary>(dictionaries[defaultLanguage])
+const bookingTitle = (t: Dictionary) => t.title
 const dayKey = (iso: string) => new Date(iso).toLocaleDateString('en-CA') // YYYY-MM-DD, local – a key, not shown
 
 function useFormat() {
@@ -38,70 +39,19 @@ function useFormat() {
   }
 }
 
-// The visitor's own choice is remembered in this browser; storage may be unavailable (private mode) – then just don't remember.
-const LANGUAGE_KEY = 'rekrutime.booking.language'
-const storedLanguage = () => {
-  try {
-    return localStorage.getItem(LANGUAGE_KEY)
-  } catch {
-    return null
-  }
-}
-
 // Public page – recruits have no account; the token in the URL is the key.
 export function BookingPage() {
   const { token } = useParams()
   const base = `/api/public/links/${token}`
   const info = useQuery({ queryKey: ['public-link', token], queryFn: () => api<LinkInfo>(base), retry: false })
-  const [chosen, setChosen] = useState(storedLanguage)
-  const language = [chosen, info.data?.language, defaultLanguage].find((l) => l && dictionaries[l])!
-  const t = dictionaries[language]
-
-  useEffect(() => {
-    document.documentElement.lang = language
-    document.title = t.title
-  }, [language, t])
-
-  const choose = (l: string) => {
-    setChosen(l)
-    try {
-      localStorage.setItem(LANGUAGE_KEY, l)
-    } catch {
-      /* not remembered – fine */
-    }
-  }
+  const { language, t, choose } = usePublicLanguage(info.data?.language, bookingTitle)
 
   const club = info.data?.clubName
   return (
     <T.Provider value={t}>
-      {/* Hero band: who's inviting, what for – and the one animated moment, the signal trace. */}
-      <Box bg="cortex.9" c="white">
-        <Container size="sm" px="md" pt="lg">
-          <Group justify="space-between" wrap="nowrap" mb={40}>
-            <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
-              <LogoMark size={26} />
-              <Text fw={600} truncate c="cortex.0">
-                {club ? `${t.recruitment} – ${club}` : t.recruitment}
-              </Text>
-            </Group>
-            <SegmentedControl
-              size="xs"
-              value={language}
-              onChange={choose}
-              color="signal.8"
-              styles={{ root: { background: 'rgba(255,255,255,0.1)' }, label: { color: 'white' } }}
-              data={Object.entries(dictionaries).map(([value, d]) => ({ value, label: value.toUpperCase(), title: d.name }))}
-            />
-          </Group>
-          <Title order={1} c="white" fz={{ base: 30, sm: 40 }} lh={1.1} maw={520}>
-            {t.title}
-          </Title>
-          {info.data && <Meta info={info.data} />}
-        </Container>
-        <Box pt="md">
-          <SignalTrace height={44} />
-        </Box>
-      </Box>
+      <PublicHeader club={club} title={t.title} t={t} language={language} onLanguage={choose}>
+        {info.data && <Meta info={info.data} />}
+      </PublicHeader>
 
       <Container size="sm" py="xl" px="md">
         <Stack gap="xl">

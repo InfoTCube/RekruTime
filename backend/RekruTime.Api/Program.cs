@@ -51,6 +51,7 @@ builder.Services.AddScoped<ReminderJob>();
 builder.Services.AddHostedService<ReminderService>(); // day-before reminders
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<FormService>();
+builder.Services.AddScoped<PublicFormService>();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(o => o.User.RequireUniqueEmail = true)
@@ -121,6 +122,7 @@ app.MapRecruitEndpoints();
 app.MapApplicationEndpoints();
 app.MapEmailEndpoints();
 app.MapFormEndpoints();
+app.MapPublicFormEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
 // Client-side routes: index.html with <base href> = path base – assets, API calls and the router are relative to it.

@@ -25,6 +25,8 @@ public partial class AuthorizationMatrixTests : IntegrationTest
         new("GET", "/api/public/links/{token}", Access.Public),
         new("GET", "/api/public/links/{token}/slots", Access.Public),
         new("POST", "/api/public/links/{token}/bookings", Access.Public, new { }),
+        new("GET", "/api/public/forms/{id:int}", Access.Public),
+        new("POST", "/api/public/forms/{id:int}/responses", Access.Public, new { }),
 
         new("GET", "/api/availability", Access.LoggedIn),
         new("POST", "/api/availability", Access.LoggedIn, new { }),

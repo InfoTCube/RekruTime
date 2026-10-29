@@ -29,7 +29,9 @@ public class FormResponse
     public int Id { get; set; }
     public int FormId { get; set; }
     public int RecruitId { get; set; }
+    public Recruit Recruit { get; set; } = null!;
     public List<FormAnswer> Answers { get; set; } = []; // jsonb
+    public string Language { get; set; } = "pl"; // the page's language when submitted – for the invitation (#31)
     public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
 }
 

@@ -20,6 +20,7 @@ import { SectionsPage } from './pages/admin/SectionsPage'
 import { UsersPage } from './pages/admin/UsersPage'
 import { AvailabilityPage } from './pages/AvailabilityPage'
 import { BookingPage } from './pages/BookingPage'
+import { FormPage } from './pages/FormPage'
 import { InterviewPage } from './pages/InterviewPage'
 import { InterviewsPage } from './pages/InterviewsPage'
 import { LoginPage } from './pages/LoginPage'
@@ -41,6 +42,7 @@ const queryClient: QueryClient = new QueryClient({
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/book/:token', element: <BookingPage /> }, // public: outside the login guard
+  { path: '/form/:id', element: <FormPage /> }, // public recruitment form
   { path: '/set-password', element: <SetPasswordPage /> }, // public: link from the account e-mail
   {
     element: <Layout />,
