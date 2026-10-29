@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { api, errorMessage } from '../api'
 import { isAdmin, useMe } from '../auth'
+import { PrepPanel } from '../components/PrepPanel'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { PageHeader, TableSkeleton } from '../components/Page'
 import { statusColor as interviewColor } from '../interviews'
@@ -78,6 +79,10 @@ export function RecruitPage() {
                         {s.name}
                       </Badge>
                     ))}
+
+          <div style={{ marginTop: 'var(--mantine-spacing-md)' }}>
+            <PrepPanel prep={detail.data.prep} />
+          </div>
                   </Group>
                   <Button size="xs" variant="light" component={Link} to={`/interviews/${i.id}`}>
                     {notes.canWrite ? 'Write your note' : 'Open'}

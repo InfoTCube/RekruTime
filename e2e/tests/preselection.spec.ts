@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { ADMIN, adminApi, json, linkIn, login, mail, member, MEMBER_PASSWORD, runId } from './helpers'
+import { ADMIN, adminApi, club, json, linkIn, login, mail, member, MEMBER_PASSWORD, runId } from './helpers'
 
 test('a section leader reads the answers and preselects applicants', async ({ page }) => {
   const run = runId()
@@ -72,4 +72,49 @@ test('an admin invites the preselected applicants and the invitation link books 
   await recruit.goto(linkIn(invitation.Text, '/book/'))
   await expect(recruit.getByRole('heading', { name: 'Book your recruitment interview' })).toBeVisible()
   await expect(recruit.getByText(`Satellites ${run}`)).toBeVisible()
+})
+
+test('interviewers prepare with the form answers, follow-ups and the section questions', async ({ page }) => {
+  const run = runId()
+  const { admin, section, leader } = await club(run)
+  const form = await json(
+    admin.post('/api/forms', {
+      data: {
+        title: `Form ${run}`,
+        fields: [
+          { id: 'sections', type: 'Sections', label: 'Sections', required: true },
+          { id: 'python', type: 'Text', label: 'Experience with Python', followUp: 'Show us something you built with it.' },
+        ],
+      },
+    }),
+  )
+  await json(admin.patch(`/api/forms/${form.id}`, { data: { isOpen: true } }))
+  const email = `dora.${run}@x.e2e`
+  await json(
+    admin.post(`/api/public/forms/${form.id}/responses`, {
+      data: { fullName: `Dora ${run}`, email, gdprConsent: true, answers: { sections: [String(section.id)], python: ['Two years of pandas'] } },
+    }),
+  )
+  const app = (await json(admin.get(`/api/preselection?sectionId=${section.id}`))).applicants[0]
+  await json(admin.post('/api/preselection', { data: { applicationIds: [app.applicationId], status: 'Preselected' } }))
+  await json(admin.post('/api/preselection/invitations', { data: { recruitIds: [app.recruitId], sendEmails: false } }))
+  const link = (await json(admin.get('/api/booking-links'))).find((l: { recruitEmail: string }) => l.recruitEmail === email)
+  const slots = await json(admin.get(`/api/public/links/${link.token}/slots`))
+  await json(admin.post(`/api/public/links/${link.token}/bookings`, { data: { start: slots[0].start, fullName: `Dora ${run}`, email, gdprConsent: true } }))
+
+  // The section leader writes the section's questions on the Preselection page…
+  await login(page, leader.email, MEMBER_PASSWORD)
+  await page.goto('/preselection')
+  await page.getByRole('button', { name: 'Interview questions' }).click()
+  await page.getByRole('textbox', { name: 'Questions' }).fill('Which project are you proudest of?\nWhat do you want to learn?')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByText('2 questions saved.')).toBeVisible()
+
+  // …and sees everything next to the notes on the interview page.
+  const interview = (await json(admin.get('/api/interviews'))).find((i: { recruit: { email: string } }) => i.recruit.email === email)
+  await page.goto(`/interviews/${interview.id}`)
+  await expect(page.getByText('Which project are you proudest of?')).toBeVisible()
+  await expect(page.getByText('Two years of pandas')).toBeVisible()
+  await expect(page.getByText('Show us something you built with it.')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Your note' })).toBeVisible() // the leader is on the team
 })

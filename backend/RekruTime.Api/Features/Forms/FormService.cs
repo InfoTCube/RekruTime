@@ -7,7 +7,7 @@ using RekruTime.Api.Data;
 namespace RekruTime.Api.Features.Forms;
 
 // Id may be left out for a new field – the server makes one.
-public record FieldDto(string? Id, FieldType Type, string Label, bool Required, List<string>? Options);
+public record FieldDto(string? Id, FieldType Type, string Label, bool Required, List<string>? Options, string? FollowUp = null);
 
 public record FormRequest(
     [Required, StringLength(200, MinimumLength = 1)] string Title,
@@ -96,7 +96,9 @@ public partial class FormService(AppDbContext db)
                 if (options.Count == 0) return Error.Validation(key, $"\"{label}\" needs at least one option.");
                 if (options.Count > 50 || options.Any(o => o.Length > 200)) return Error.Validation(key, "Up to 50 options of up to 200 characters.");
             }
-            fields.Add(new FormField { Id = id, Type = x.Type, Label = label, Required = x.Required, Options = options });
+            var followUp = string.IsNullOrWhiteSpace(x.FollowUp) ? null : x.FollowUp.Trim();
+            if (followUp?.Length > 500) return Error.Validation(key, "The follow-up question can have up to 500 characters.");
+            fields.Add(new FormField { Id = id, Type = x.Type, Label = label, Required = x.Required, Options = options, FollowUp = followUp });
         }
         return fields;
     }
@@ -109,5 +111,5 @@ public partial class FormService(AppDbContext db)
     static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     static FormDto ToDto(Form f, int responses) => new(f.Id, f.Title, f.Description, f.IsOpen,
-        f.Fields.Select(x => new FieldDto(x.Id, x.Type, x.Label, x.Required, x.Options)).ToList(), f.CreatedAt, responses);
+        f.Fields.Select(x => new FieldDto(x.Id, x.Type, x.Label, x.Required, x.Options, x.FollowUp)).ToList(), f.CreatedAt, responses);
 }

@@ -19,6 +19,9 @@ public static class InterviewEndpoints
         group.MapPatch("/{id:int}", async (int id, UpdateInterviewRequest req, InterviewService s) =>
             (await s.UpdateAsync(id, req)).ToHttp()).RequireAuthorization(Roles.Admin);
 
+        group.MapGet("/{id:int}/prep", async (int id, ClaimsPrincipal me, PrepService s) =>
+            (await s.ForInterviewAsync(id, me.Id(), me.IsInRole(Roles.Admin))).ToHttp());
+
         group.MapGet("/{id:int}/notes", async (int id, ClaimsPrincipal me, NoteService s) =>
             (await s.ListAsync(id, me.Id(), me.IsInRole(Roles.Admin))).ToHttp());
 
