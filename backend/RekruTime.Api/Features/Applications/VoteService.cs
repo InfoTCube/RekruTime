@@ -24,6 +24,7 @@ public class VoteService(AppDbContext db)
         if (!me.IsLeader && !me.IsAdmin) return Error.Forbidden("Only leaders of this section and admins can vote.");
         if (votes.Any(v => v.IsFinal)) return Error.Conflict("A final decision has already been made.");
         if (app.DecisionSentAt is not null) return Error.Conflict("The decision e-mail was already sent – votes are locked.");
+        if (InPreselection(app.Status)) return Error.Conflict("This application is still in preselection – vote after the interview.");
 
         var existing = await db.ApplicationVotes.SingleOrDefaultAsync(v => v.ApplicationId == app.Id && v.UserId == userId);
         if (req.IsFinal)
@@ -45,6 +46,10 @@ public class VoteService(AppDbContext db)
         await tx.CommitAsync();
         return await GetAsync(app.Id);
     }
+
+    // Form applications before the invitation: decided by preselection, not votes (a vote would reset the status).
+    public static bool InPreselection(ApplicationStatus s) =>
+        s is ApplicationStatus.Submitted or ApplicationStatus.Preselected or ApplicationStatus.NotPreselected;
 
     public async Task<ApplicationVotesDto> GetAsync(int applicationId) =>
         new(applicationId, await db.Applications.Where(a => a.Id == applicationId).Select(a => a.Status).SingleAsync(),

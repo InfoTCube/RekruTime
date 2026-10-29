@@ -80,7 +80,7 @@ public class RecruitReviewService(AppDbContext db, InterviewService interviews, 
         return rows.Select(a =>
         {
             var decided = a.Votes.Any(v => v.IsFinal) || a.DecisionSentAt != null; // decision e-mail sent → locked
-            var canVote = !decided && (me.IsAdmin || led!.Contains(a.SectionId));
+            var canVote = !decided && !VoteService.InPreselection(a.Status) && (me.IsAdmin || led!.Contains(a.SectionId));
             var canDecide = !decided && me.IsAdmin && a.Status == ApplicationStatus.Disputed && a.Votes.All(v => v.UserId != me.UserId);
             return (a.RecruitId, new ApplicationReviewDto(a.Id, a.SectionId, a.SectionName, a.Status, a.Votes, canVote, canDecide, a.DecisionSentAt));
         }).ToList();

@@ -8,7 +8,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { PageHeader, TableSkeleton } from '../components/Page'
 import { statusColor as interviewColor } from '../interviews'
 import { notifySuccess } from '../notify'
-import { decisionKind, decisionState, recruitsKey, sendDecisions, statusColor, type Application, type Decision, type RecruitDetail } from '../recruits'
+import { decisionKind, decisionState, recruitsKey, sendDecisions, statusColor, statusLabel, type Application, type Decision, type RecruitDetail } from '../recruits'
 import { OtherNote } from './InterviewPage'
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -184,7 +184,7 @@ function ApplicationCard({ application: a }: { application: Application }) {
         <Group gap="xs">
           <Text fw={600}>{a.sectionName}</Text>
           <Badge color={statusColor[a.status]} variant="light">
-            {a.status}
+            {statusLabel[a.status]}
           </Badge>
         </Group>
 

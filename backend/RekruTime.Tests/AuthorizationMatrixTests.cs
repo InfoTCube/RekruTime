@@ -72,6 +72,8 @@ public partial class AuthorizationMatrixTests : IntegrationTest
         new("DELETE", "/api/email/templates/{key}/{language}", Access.Admin),
         new("POST", "/api/email/templates/{key}/{language}/preview", Access.Admin, new { subject = "x", body = "x" }),
         new("POST", "/api/email/decisions", Access.Admin, new { recruitIds = new[] { 999999 } }),
+        new("GET", "/api/preselection", Access.Reviewer),
+        new("POST", "/api/preselection", Access.Reviewer, new { applicationIds = new[] { 999999 }, status = "Preselected" }),
         new("GET", "/api/forms", Access.Admin),
         new("GET", "/api/forms/{id:int}", Access.Admin),
         new("POST", "/api/forms", Access.Admin, new { }),

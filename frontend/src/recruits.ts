@@ -47,6 +47,11 @@ export const statusColor: Record<ApplicationStatus, string> = {
   Submitted: 'gray', Preselected: 'cortex', NotPreselected: 'red', InterviewInvited: 'cortex',
 }
 
+export const statusLabel: Record<ApplicationStatus, string> = {
+  Pending: 'Pending', Disputed: 'Disputed', Accepted: 'Accepted', Rejected: 'Rejected',
+  Submitted: 'Submitted', Preselected: 'Preselected', NotPreselected: 'Not preselected', InterviewInvited: 'Invited',
+}
+
 // Decision e-mail for a recruit (one per recruit, mirrors DecisionService): ready once every application is accepted/rejected.
 export type DecisionState = 'sent' | 'ready' | 'waiting'
 export const decisionState = (apps: Application[]): DecisionState =>
