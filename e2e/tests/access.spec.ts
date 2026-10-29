@@ -49,7 +49,7 @@ test('recruiters see only their pages; section leaders also see Recruits', async
   const nav = rita.getByRole('navigation')
   await expect(nav.getByRole('link', { name: 'Interviews' })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'My availability' })).toBeVisible()
-  for (const hidden of ['Recruits', 'Overview', 'Users', 'Import recruits', 'E-mail']) await expect(nav.getByRole('link', { name: hidden, exact: true })).toHaveCount(0)
+  for (const hidden of ['Recruits', 'Overview', 'Users', 'Import recruits', 'E-mail', 'Forms']) await expect(nav.getByRole('link', { name: hidden, exact: true })).toHaveCount(0)
   for (const path of ['/admin/users', '/recruits', '/overview']) {
     await rita.goto(path)
     await expect(rita).toHaveURL(/\/interviews$/) // sent home

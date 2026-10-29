@@ -10,6 +10,8 @@ import { ApiError, basePath } from './api'
 import { meKey } from './auth'
 import { Home, Layout, RequireAdmin, RequireReviewer } from './Layout'
 import { EmailPage } from './pages/admin/EmailPage'
+import { FormBuilderPage } from './pages/admin/FormBuilderPage'
+import { FormsPage } from './pages/admin/FormsPage'
 import { ImportPage } from './pages/admin/ImportPage'
 import { LinksPage } from './pages/admin/LinksPage'
 import { OverviewPage } from './pages/admin/OverviewPage'
@@ -60,6 +62,8 @@ const router = createBrowserRouter([
         element: <RequireAdmin />,
         children: [
           { path: 'recruitment', element: <RecruitmentPage /> },
+          { path: 'forms', element: <FormsPage /> },
+          { path: 'forms/:id', element: <FormBuilderPage /> },
           { path: 'import', element: <ImportPage /> },
           { path: 'links', element: <LinksPage /> },
           { path: 'email', element: <EmailPage /> },

@@ -5,6 +5,7 @@ import {
   IconCalendarTime,
   IconClockHour4,
   IconFileImport,
+  IconForms,
   IconHierarchy2,
   IconKey,
   IconLayoutDashboard,
@@ -41,6 +42,7 @@ const nav: { label?: string; admin?: boolean; items: Item[] }[] = [
     admin: true,
     items: [
       { to: '/admin/recruitment', label: 'Recruitment period', icon: IconCalendarTime },
+      { to: '/admin/forms', label: 'Forms', icon: IconForms },
       { to: '/admin/import', label: 'Import recruits', icon: IconFileImport },
       { to: '/admin/links', label: 'Booking links', icon: IconLink },
       { to: '/admin/email', label: 'E-mail', icon: IconMail },
