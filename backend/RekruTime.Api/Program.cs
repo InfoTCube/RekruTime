@@ -9,6 +9,7 @@ using RekruTime.Api.Features.Auth;
 using RekruTime.Api.Features.Availability;
 using RekruTime.Api.Features.Booking;
 using RekruTime.Api.Features.Email;
+using RekruTime.Api.Features.Forms;
 using RekruTime.Api.Features.Interviews;
 using RekruTime.Api.Features.Recruits;
 using RekruTime.Api.Features.Sections;
@@ -49,6 +50,7 @@ builder.Services.AddScoped<BookingEmailService>();
 builder.Services.AddScoped<ReminderJob>();
 builder.Services.AddHostedService<ReminderService>(); // day-before reminders
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<FormService>();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(o => o.User.RequireUniqueEmail = true)
@@ -118,6 +120,7 @@ app.MapInterviewEndpoints();
 app.MapRecruitEndpoints();
 app.MapApplicationEndpoints();
 app.MapEmailEndpoints();
+app.MapFormEndpoints();
 
 app.MapFallback("/api/{**rest}", () => Results.NotFound()); // unknown API routes stay 404, not index.html
 // Client-side routes: index.html with <base href> = path base – assets, API calls and the router are relative to it.

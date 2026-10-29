@@ -3,7 +3,9 @@ import { api } from './api'
 import { isAdmin, type Me } from './auth'
 import type { Interview, InterviewStatus, Notes } from './interviews'
 
-export type ApplicationStatus = 'Pending' | 'Disputed' | 'Accepted' | 'Rejected'
+export type ApplicationStatus =
+  | 'Pending' | 'Disputed' | 'Accepted' | 'Rejected'
+  | 'Submitted' | 'Preselected' | 'NotPreselected' | 'InterviewInvited' // from forms (phase 3)
 export type Decision = 'Approve' | 'Reject'
 
 export type Vote = { userId: string; name: string; decision: Decision; isFinal: boolean; comment: string | null; createdAt: string }
@@ -40,7 +42,10 @@ export const useRecruits = (params: Record<string, string | undefined>) => {
   return useQuery({ queryKey: [...recruitsKey, params], queryFn: () => api<RecruitRow[]>(`/api/recruits?${search}`) })
 }
 
-export const statusColor: Record<ApplicationStatus, string> = { Pending: 'gray', Disputed: 'spark', Accepted: 'signal', Rejected: 'red' }
+export const statusColor: Record<ApplicationStatus, string> = {
+  Pending: 'gray', Disputed: 'spark', Accepted: 'signal', Rejected: 'red',
+  Submitted: 'gray', Preselected: 'cortex', NotPreselected: 'red', InterviewInvited: 'cortex',
+}
 
 // Decision e-mail for a recruit (one per recruit, mirrors DecisionService): ready once every application is accepted/rejected.
 export type DecisionState = 'sent' | 'ready' | 'waiting'

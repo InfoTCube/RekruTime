@@ -18,6 +18,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<RecruitmentSettings> RecruitmentSettings => Set<RecruitmentSettings>();
     public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+    public DbSet<Form> Forms => Set<Form>();
+    public DbSet<FormResponse> FormResponses => Set<FormResponse>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder b)
     {
@@ -26,6 +28,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Properties<VoteDecision>().HaveConversion<string>();
         b.Properties<InterviewStatus>().HaveConversion<string>();
         b.Properties<EmailStatus>().HaveConversion<string>();
+        b.Properties<FieldType>().HaveConversion<string>();
     }
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -90,6 +93,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<InterviewNote>().HasOne<Interview>().WithMany().HasForeignKey(n => n.InterviewId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<InterviewNote>().HasOne(n => n.Author).WithMany().HasForeignKey(n => n.AuthorId).OnDelete(DeleteBehavior.SetNull);
         b.Entity<InterviewNote>().HasIndex(n => new { n.InterviewId, n.AuthorId }).IsUnique();
+
+        b.Entity<Form>().Property(f => f.Title).HasMaxLength(200);
+        b.Entity<Form>().Property(f => f.Description).HasMaxLength(5000);
+        b.Entity<Form>().ComplexCollection(f => f.Fields, f => f.ToJson("Schema"));
+        b.Entity<FormResponse>().ComplexCollection(r => r.Answers, a => a.ToJson());
+        b.Entity<FormResponse>().HasIndex(r => new { r.FormId, r.RecruitId }).IsUnique();
+        // A form with responses can't be deleted (FormService refuses); the recruit's GDPR delete takes their responses.
+        b.Entity<FormResponse>().HasOne<Form>().WithMany().HasForeignKey(r => r.FormId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<FormResponse>().HasOne<Recruit>().WithMany().HasForeignKey(r => r.RecruitId).OnDelete(DeleteBehavior.Cascade);
         // The room-overlap exclusion constraint is raw SQL in the migration (EF can't model EXCLUDE).
     }
 }
