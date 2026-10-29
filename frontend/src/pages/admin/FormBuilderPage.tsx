@@ -1,9 +1,10 @@
 import { ActionIcon, Alert, Anchor, Badge, Button, Checkbox, Divider, Group, Menu, Paper, Select, Skeleton, Stack, Tabs, Text, Textarea, TextInput, Title } from '@mantine/core'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { IconArrowDown, IconArrowUp, IconEye, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
-import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useBlocker, useNavigate, useParams } from 'react-router'
 import { api, errorMessage, fieldError } from '../../api'
+import { ConfirmModal } from '../../components/ConfirmModal'
 import { FormFields } from '../../components/FormFields'
 import { PageHeader } from '../../components/Page'
 import { fieldTypes, formsKey, hasOptions, useForm, type Answers, type FieldType, type Form, type FormField } from '../../forms'
@@ -27,13 +28,30 @@ export function FormBuilderPage() {
 
 function Builder({ id, initial, isOpen }: { id: number | null; initial: Draft; isOpen: boolean }) {
   const [draft, setDraft] = useState<Draft>({ title: initial.title, description: initial.description ?? '', fields: initial.fields })
+  const [savedDraft, setSavedDraft] = useState(draft)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
+  // Unsaved edits: ask before leaving the page (in-app links) or closing the tab.
+  const dirty = JSON.stringify(draft) !== JSON.stringify(savedDraft)
+  const dirtyRef = useRef(dirty)
+  useEffect(() => {
+    dirtyRef.current = dirty
+  }, [dirty])
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirtyRef.current && currentLocation.pathname !== nextLocation.pathname)
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
+
   const save = useMutation({
     mutationFn: (d: Draft) => (id === null ? api<Form>('/api/forms', { method: 'POST', json: d }) : api<Form>(`/api/forms/${id}`, { method: 'PUT', json: d })),
-    onSuccess: (saved) => {
+    onSuccess: (saved, sent) => {
       notifySuccess('Form saved.')
+      setSavedDraft(sent)
+      dirtyRef.current = JSON.stringify(draft) !== JSON.stringify(sent) // before the redirect below, which the blocker sees
       queryClient.invalidateQueries({ queryKey: formsKey })
       if (id === null) navigate(`/admin/forms/${saved.id}`, { replace: true })
     },
@@ -75,6 +93,17 @@ function Builder({ id, initial, isOpen }: { id: number | null; initial: Draft; i
       </PageHeader>
 
       {!!save.error && !fieldErrorsShown && <Alert color="red">{errorMessage(save.error)}</Alert>}
+
+      <ConfirmModal
+        opened={blocker.state === 'blocked'}
+        title="Unsaved changes"
+        message="You have changes that aren't saved. Leave the page and lose them?"
+        confirmLabel="Leave without saving"
+        loading={false}
+        error={null}
+        onConfirm={() => blocker.proceed?.()}
+        onClose={() => blocker.reset?.()}
+      />
 
       <Tabs defaultValue="edit" keepMounted={false}>
         <Tabs.List mb="md">
