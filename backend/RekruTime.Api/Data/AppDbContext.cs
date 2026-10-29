@@ -99,9 +99,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<Form>().ComplexCollection(f => f.Fields, f => f.ToJson("Schema"));
         b.Entity<FormResponse>().ComplexCollection(r => r.Answers, a => a.ToJson());
         b.Entity<FormResponse>().HasIndex(r => new { r.FormId, r.RecruitId }).IsUnique();
+        b.Entity<FormResponse>().Property(r => r.Language).HasMaxLength(5);
         // A form with responses can't be deleted (FormService refuses); the recruit's GDPR delete takes their responses.
         b.Entity<FormResponse>().HasOne<Form>().WithMany().HasForeignKey(r => r.FormId).OnDelete(DeleteBehavior.Restrict);
-        b.Entity<FormResponse>().HasOne<Recruit>().WithMany().HasForeignKey(r => r.RecruitId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<FormResponse>().HasOne(r => r.Recruit).WithMany().HasForeignKey(r => r.RecruitId).OnDelete(DeleteBehavior.Cascade);
         // The room-overlap exclusion constraint is raw SQL in the migration (EF can't model EXCLUDE).
     }
 }

@@ -45,6 +45,21 @@ export const pl = {
   invalidDiscord: 'Nick jest za długi (maks. 50 znaków).',
   invalidPhone: 'Numer jest za długi.',
   somethingWrong: 'Coś poszło nie tak. Spróbuj ponownie.',
+  // Recruitment form (/form/:id)
+  formPageTitle: 'Formularz rekrutacyjny',
+  formNotFound: 'Nie ma takiego formularza',
+  formClosed: 'Ten formularz jest już zamknięty',
+  formProblemHelp: 'Jeśli masz pytania, napisz do nas:',
+  submit: 'Wyślij zgłoszenie',
+  editAnswers: 'Zmień odpowiedzi',
+  submitted: 'Dziękujemy! Twoje zgłoszenie zostało wysłane.',
+  submittedNote: 'Napiszemy do Ciebie e-mailem w sprawie kolejnych kroków. Jeśli chcesz coś poprawić, możesz wysłać formularz jeszcze raz – zapiszemy nowe odpowiedzi.',
+  requiredAnswer: 'Odpowiedz na to pytanie.',
+  invalidAnswer: 'Sprawdź tę odpowiedź.',
+  formPrivacy: (contact: string | null) =>
+    `Twoje imię i nazwisko, e-mail i odpowiedzi wykorzystujemy wyłącznie do przeprowadzenia tej rekrutacji. ` +
+    `Widzi je tylko zespół rekrutacyjny. Usuwamy je po zakończeniu rekrutacji. W każdej chwili możesz poprosić o wgląd w swoje dane, ich poprawienie lub usunięcie` +
+    `${contact ? `, pisząc na ${contact}` : ''}. Zgoda jest dobrowolna, ale bez niej nie możemy przyjąć zgłoszenia.`,
 }
 
 export type Dictionary = typeof pl
