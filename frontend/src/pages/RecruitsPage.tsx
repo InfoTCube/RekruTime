@@ -8,11 +8,11 @@ import { isAdmin, useMe } from '../auth'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { EmptyState, PageHeader, TableSkeleton } from '../components/Page'
 import { notifySuccess } from '../notify'
-import { decisionKind, decisionState, recruitsKey, sendDecisions, statusColor, useRecruits, type Application, type ApplicationStatus } from '../recruits'
+import { decisionKind, decisionState, recruitsKey, sendDecisions, statusColor, statusLabel, useRecruits, type Application, type ApplicationStatus } from '../recruits'
 import { useSections } from '../sections'
 
 const date = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-const statuses: ApplicationStatus[] = ['Pending', 'Disputed', 'Accepted', 'Rejected']
+const statuses: ApplicationStatus[] = ['Submitted', 'Preselected', 'NotPreselected', 'InterviewInvited', 'Pending', 'Disputed', 'Accepted', 'Rejected']
 
 export function RecruitsPage() {
   const me = useMe()
@@ -51,7 +51,7 @@ export function RecruitsPage() {
         {sectionOptions.length > 1 && (
           <Select placeholder="All sections" clearable value={sectionId} onChange={setSectionId} data={sectionOptions.map((s) => ({ value: String(s.id), label: s.name }))} />
         )}
-        <Select placeholder="Any status" clearable value={status} onChange={setStatus} data={statuses} />
+        <Select placeholder="Any status" clearable value={status} onChange={setStatus} data={statuses.map((s) => ({ value: s, label: statusLabel[s] }))} />
         {admin && (
           <Button leftSection={<IconMailForward size={16} />} disabled={!ready.length} onClick={() => (send.reset(), setConfirming(true))}>
             Send decisions ({ready.length})
@@ -135,7 +135,7 @@ function ApplicationLine({ application: a }: { application: Application }) {
   return (
     <Group gap="xs" wrap="nowrap">
       <Badge variant="light" color={statusColor[a.status]} size="sm">
-        {a.sectionName} · {a.status}
+        {a.sectionName} · {statusLabel[a.status]}
       </Badge>
       {a.votes.length > 0 && (
         <Text size="xs" c="dimmed" title={a.votes.map((v) => `${v.name}: ${v.decision}${v.isFinal ? ' (final)' : ''}`).join('\n')}>

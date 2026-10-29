@@ -5,6 +5,7 @@ import {
   IconCalendarTime,
   IconClockHour4,
   IconFileImport,
+  IconFilter,
   IconForms,
   IconHierarchy2,
   IconKey,
@@ -33,6 +34,7 @@ const nav: { label?: string; admin?: boolean; items: Item[] }[] = [
     items: [
       { to: '/overview', label: 'Overview', icon: IconLayoutDashboard },
       { to: '/interviews', label: 'Interviews', icon: IconCalendarEvent },
+      { to: '/preselection', label: 'Preselection', icon: IconFilter },
       { to: '/recruits', label: 'Recruits', icon: IconUserCheck },
       { to: '/availability', label: 'My availability', icon: IconClockHour4 },
     ],
@@ -177,7 +179,7 @@ export function Layout() {
                     </Text>
                   )}
                   {g.items
-                    .filter((n) => (n.to === '/overview' ? admin : n.to === '/recruits' ? isReviewer(me.data) : true))
+                    .filter((n) => (n.to === '/overview' ? admin : n.to === '/recruits' || n.to === '/preselection' ? isReviewer(me.data) : true))
                     .map((n) => (
                       <NavLink key={n.to} component={RouterLink} to={n.to} label={n.label} leftSection={<n.icon size={18} stroke={1.6} />} onClick={close} style={{ borderRadius: 'var(--mantine-radius-md)' }} />
                     ))}

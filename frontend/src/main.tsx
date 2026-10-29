@@ -24,6 +24,7 @@ import { FormPage } from './pages/FormPage'
 import { InterviewPage } from './pages/InterviewPage'
 import { InterviewsPage } from './pages/InterviewsPage'
 import { LoginPage } from './pages/LoginPage'
+import { PreselectionPage } from './pages/PreselectionPage'
 import { RecruitPage } from './pages/RecruitPage'
 import { RecruitsPage } from './pages/RecruitsPage'
 import { SetPasswordPage } from './pages/SetPasswordPage'
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
       {
         element: <RequireReviewer />,
         children: [
+          { path: 'preselection', element: <PreselectionPage /> },
           { path: 'recruits', element: <RecruitsPage /> },
           { path: 'recruits/:id', element: <RecruitPage /> },
         ],

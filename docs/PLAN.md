@@ -237,7 +237,7 @@ Admin API (#27): `GET/POST /api/forms`, `GET/PUT/PATCH {isOpen}/DELETE /api/form
 1. Admin creates form → public URL `/form/:id`
 2. Submit → upsert Recruit by email, FormResponse, Application per chosen section (`Submitted`)
    - Public API (#29): `GET /api/public/forms/{id}` (410 when closed), `POST /api/public/forms/{id}/responses` – rate-limited like booking, consent required, every answer validated against its question. Submitting again replaces the answers; a section un-ticked then drops its application only while it is still `Submitted`. The page language is saved with the response (for the invitation). A Phone answer fills `Recruit.Phone`.
-3. `/recruits` gets a "Preselection" view: answers per section, mark Preselected / NotPreselected (leaders for their section, admins all)
+3. **Preselection page** `/preselection` (#30): per section, applicants with their latest form answers; mark Preselected / NotPreselected / back to Submitted, one by one or in bulk (leaders for their sections, admins all). API `GET /api/preselection?sectionId`, `POST /api/preselection {applicationIds, status}` – applications outside preselection (imported, invited) are skipped. Votes are refused while an application is Submitted / Preselected / NotPreselected.
 4. "Invite to interview" (bulk) → creates an individual BookingLink per recruit with `RecruitId` set and S = their preselected sections. Until phase 4: copy links / export CSV.
 
 Reuses the MVP booking flow and link model unchanged – links are already individual.
