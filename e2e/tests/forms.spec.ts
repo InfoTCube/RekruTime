@@ -96,3 +96,28 @@ test('a recruit fills in an open form on a phone, in Polish or English', async (
   await page.reload()
   await expect(page.getByText('This form is closed')).toBeVisible()
 })
+
+test('leaving the builder with unsaved changes asks first', async ({ page }) => {
+  await login(page, ADMIN.email, ADMIN.password)
+  await page.goto('/admin/forms/new')
+  await page.getByRole('textbox', { name: 'Title' }).fill(`Draft ${runId()}`)
+
+  await page.getByRole('link', { name: '← All forms' }).click()
+  await expect(page.getByRole('dialog', { name: 'Unsaved changes' })).toBeVisible()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page).toHaveURL(/\/admin\/forms\/new$/)
+  await expect(page.getByRole('textbox', { name: 'Title' })).not.toHaveValue('')
+
+  // Saving clears it: the redirect to the new form's page and leaving afterwards aren't blocked.
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page).toHaveURL(/\/admin\/forms\/\d+$/)
+  await page.getByRole('link', { name: '← All forms' }).click()
+  await expect(page).toHaveURL(/\/admin\/forms$/)
+
+  // Leave without saving
+  await page.getByRole('link', { name: 'New form' }).click()
+  await page.getByRole('textbox', { name: 'Title' }).fill('Thrown away')
+  await page.getByRole('navigation').getByRole('link', { name: 'Sections' }).click()
+  await page.getByRole('button', { name: 'Leave without saving' }).click()
+  await expect(page).toHaveURL(/\/admin\/sections$/)
+})
