@@ -52,12 +52,12 @@ export const statusLabel: Record<ApplicationStatus, string> = {
   Submitted: 'Submitted', Preselected: 'Preselected', NotPreselected: 'Not preselected', InterviewInvited: 'Invited',
 }
 
-// Decision e-mail for a recruit (one per recruit, mirrors DecisionService): ready once every application is accepted/rejected.
+// Decision e-mail for a recruit (one per recruit, mirrors DecisionService): ready once every application is accepted/rejected/not preselected.
 export type DecisionState = 'sent' | 'ready' | 'waiting'
 export const decisionState = (apps: Application[]): DecisionState =>
   apps.length > 0 && apps.every((a) => a.decisionSentAt)
     ? 'sent'
-    : apps.length > 0 && apps.every((a) => (a.status === 'Accepted' || a.status === 'Rejected') && !a.decisionSentAt)
+    : apps.length > 0 && apps.every((a) => (a.status === 'Accepted' || a.status === 'Rejected' || a.status === 'NotPreselected') && !a.decisionSentAt)
       ? 'ready'
       : 'waiting'
 // Any accepted section → the "accepted" e-mail listing those; otherwise "rejected".

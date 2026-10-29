@@ -53,6 +53,7 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<FormService>();
 builder.Services.AddScoped<PublicFormService>();
 builder.Services.AddScoped<PreselectionService>();
+builder.Services.AddScoped<InterviewInviteService>();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(o => o.User.RequireUniqueEmail = true)

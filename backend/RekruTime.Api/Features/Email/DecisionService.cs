@@ -10,7 +10,7 @@ public record SendDecisionsRequest([MinLength(1), MaxLength(2000)] int[] Recruit
 public record SendDecisionsResult(int Queued, int Skipped);
 
 // Decision e-mails – only when an admin asks, never automatically on a vote. One e-mail per recruit, once all
-// their applications are Accepted/Rejected: "accepted" (listing the accepted sections) if any is, else "rejected".
+// their applications are Accepted/Rejected/NotPreselected: "accepted" (listing the accepted sections) if any is, else "rejected".
 // Sending locks the votes (VoteService), so the decision can't change after the recruit was told.
 public class DecisionService(AppDbContext db, TemplateService templates, IOptions<ClubOptions> club, IOptions<EmailOptions> email)
 {
@@ -24,10 +24,13 @@ public class DecisionService(AppDbContext db, TemplateService templates, IOption
         var apps = await db.Applications.FromSqlInterpolated($"SELECT * FROM \"Applications\" WHERE \"RecruitId\" = ANY({ids}) FOR UPDATE").ToListAsync();
         var sections = await db.Sections.ToDictionaryAsync(s => s.Id, s => s.Name);
         var recruits = await db.Recruits.Where(r => ids.Contains(r.Id)).ToListAsync();
-        // The recruit's language = their latest booking link's.
+        // The recruit's language = their latest booking link's, else the one they filled the form in (not invited at all).
         var languages = (await db.BookingLinks.Where(l => l.RecruitId != null && ids.Contains(l.RecruitId.Value))
                 .Select(l => new { RecruitId = l.RecruitId!.Value, l.Language, l.Id }).ToListAsync())
             .GroupBy(l => l.RecruitId).ToDictionary(g => g.Key, g => g.MaxBy(l => l.Id)!.Language);
+        foreach (var r in (await db.FormResponses.Where(x => ids.Contains(x.RecruitId)).Select(x => new { x.RecruitId, x.Language, x.SubmittedAt }).ToListAsync())
+                     .GroupBy(x => x.RecruitId))
+            languages.TryAdd(r.Key, r.MaxBy(x => x.SubmittedAt)!.Language);
 
         var queued = 0;
         foreach (var recruit in recruits)
@@ -49,7 +52,8 @@ public class DecisionService(AppDbContext db, TemplateService templates, IOption
         return new SendDecisionsResult(queued, ids.Length - queued);
     }
 
-    // Every application decided and none told yet.
+    // Every application decided and none told yet. Not preselected (forms) is a final "no" too – those recruits
+    // get the rejection without an interview.
     public static bool IsReady(IReadOnlyCollection<Application> apps) =>
-        apps.Count > 0 && apps.All(a => a.Status is ApplicationStatus.Accepted or ApplicationStatus.Rejected && a.DecisionSentAt == null);
+        apps.Count > 0 && apps.All(a => a.Status is ApplicationStatus.Accepted or ApplicationStatus.Rejected or ApplicationStatus.NotPreselected && a.DecisionSentAt == null);
 }

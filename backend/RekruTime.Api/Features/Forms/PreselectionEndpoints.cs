@@ -15,5 +15,11 @@ public static class PreselectionEndpoints
         group.MapGet("/", async (int? sectionId, ClaimsPrincipal me, PreselectionService s) => (await s.ListAsync(Viewer(me), sectionId)).ToHttp());
 
         group.MapPost("/", async (PreselectRequest req, ClaimsPrincipal me, PreselectionService s) => (await s.SetAsync(Viewer(me), req)).ToHttp());
+
+        // Invitations go per recruit across all sections, so admins send them.
+        group.MapGet("/invitations", (InterviewInviteService s) => s.CandidatesAsync()).RequireAuthorization(Roles.Admin);
+
+        group.MapPost("/invitations", async (InviteRequest req, ClaimsPrincipal me, InterviewInviteService s) =>
+            (await s.InviteAsync(req, me.Id())).ToHttp()).RequireAuthorization(Roles.Admin);
     }
 }
