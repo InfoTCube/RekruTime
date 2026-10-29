@@ -16,6 +16,11 @@ export type Interview = {
 
 export type Note = { authorId: string | null; authorName: string; text: string; updatedAt: string }
 export type Notes = { canWrite: boolean; notes: Note[] }
+// Interview prep (#93): the recruit's form answers and the sections' suggested questions.
+export type Prep = {
+  forms: { formId: number; title: string; submittedAt: string; answers: { question: string; values: string[]; followUp: string | null }[] }[]
+  sections: { id: number; name: string; questions: string[] }[]
+}
 
 export const interviewsKey = ['interviews']
 export const notesKey = (id: number) => [...interviewsKey, id, 'notes']

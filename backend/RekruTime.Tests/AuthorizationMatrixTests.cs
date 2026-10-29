@@ -35,6 +35,7 @@ public partial class AuthorizationMatrixTests : IntegrationTest
         new("GET", "/api/settings/recruitment", Access.LoggedIn),
         new("GET", "/api/interviews", Access.LoggedIn),
         new("GET", "/api/interviews/{id:int}", Access.LoggedIn),
+        new("GET", "/api/interviews/{id:int}/prep", Access.LoggedIn),
         new("GET", "/api/interviews/{id:int}/notes", Access.LoggedIn),
         new("PUT", "/api/interviews/{id:int}/notes", Access.LoggedIn, new { text = "x" }),
         new("POST", "/api/applications/{id:int}/votes", Access.LoggedIn, new { decision = "Approve" }),
@@ -49,6 +50,8 @@ public partial class AuthorizationMatrixTests : IntegrationTest
         new("PUT", "/api/sections/{id:int}", Access.Admin, new { name = "x" }),
         new("DELETE", "/api/sections/{id:int}", Access.Admin),
         new("GET", "/api/sections/capacity", Access.Admin),
+        new("GET", "/api/sections/{id:int}/questions", Access.LoggedIn),   // leaders of the section + admins, checked in the service
+        new("PUT", "/api/sections/{id:int}/questions", Access.LoggedIn, new { questions = Array.Empty<string>() }),
         new("PUT", "/api/settings/recruitment", Access.Admin, new { }),
         new("GET", "/api/settings/reminders", Access.Admin),
         new("PUT", "/api/settings/reminders", Access.Admin, new { enabled = false }),

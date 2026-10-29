@@ -3,7 +3,7 @@ import { api, basePath } from './api'
 
 export type FieldType = 'Text' | 'Textarea' | 'Email' | 'Phone' | 'SingleChoice' | 'MultiChoice' | 'Sections'
 
-export type FormField = { id: string; type: FieldType; label: string; required: boolean; options: string[] }
+export type FormField = { id: string; type: FieldType; label: string; required: boolean; options: string[]; followUp?: string | null }
 
 export type Form = {
   id: number

@@ -1,4 +1,4 @@
-import { Alert, Anchor, Paper, Stack, Text, Textarea, Title } from '@mantine/core'
+import { Alert, Anchor, Paper, SimpleGrid, Stack, Text, Textarea, Title } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -6,7 +6,8 @@ import { Link, useParams } from 'react-router'
 import { api, errorMessage } from '../api'
 import { isAdmin, useMe } from '../auth'
 import { PageHeader, TableSkeleton } from '../components/Page'
-import { interviewsKey, notesKey, type Interview, type Note, type Notes } from '../interviews'
+import { PrepPanel } from '../components/PrepPanel'
+import { interviewsKey, notesKey, type Interview, type Note, type Notes, type Prep } from '../interviews'
 import { InterviewCard } from './InterviewsPage'
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -16,6 +17,7 @@ export function InterviewPage() {
   const me = useMe()
   const interview = useQuery({ queryKey: [...interviewsKey, id], queryFn: () => api<Interview>(`/api/interviews/${id}`) })
   const notes = useQuery({ queryKey: notesKey(id), queryFn: () => api<Notes>(`/api/interviews/${id}/notes`), refetchOnWindowFocus: false })
+  const prep = useQuery({ queryKey: [...interviewsKey, id, 'prep'], queryFn: () => api<Prep>(`/api/interviews/${id}/prep`) })
   const myId = me.data?.id
   const others = notes.data?.notes.filter((n) => n.authorId !== myId) ?? []
 
@@ -28,22 +30,28 @@ export function InterviewPage() {
       {interview.isError && <Alert color="red">{errorMessage(interview.error)}</Alert>}
       {interview.data && <InterviewCard interview={interview.data} admin={isAdmin(me.data)} />}
 
-      <Title order={3} mt="md">
-        Notes
-      </Title>
-      {notes.isPending && <TableSkeleton rows={2} />}
-      {notes.isError && !interview.isError && <Alert color="red">{errorMessage(notes.error)}</Alert>}
-      {notes.data?.canWrite && (
-        <MyNote key={id} interviewId={id} initial={notes.data.notes.find((n) => n.authorId === myId)?.text ?? ''} />
-      )}
-      {notes.data && !notes.data.canWrite && others.length === 0 && (
-        <Text c="dimmed" size="sm">
-          No notes yet.
-        </Text>
-      )}
-      {others.map((n) => (
-        <OtherNote key={`${n.authorId}-${n.authorName}`} note={n} />
-      ))}
+      {/* Prep next to the notes: read the answers and questions while writing. */}
+      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl" mt="md">
+        <div>{prep.data ? <PrepPanel prep={prep.data} /> : prep.isPending && <TableSkeleton rows={3} />}</div>
+        <Stack>
+          <Title order={3}>
+            Notes
+          </Title>
+          {notes.isPending && <TableSkeleton rows={2} />}
+          {notes.isError && !interview.isError && <Alert color="red">{errorMessage(notes.error)}</Alert>}
+          {notes.data?.canWrite && (
+            <MyNote key={id} interviewId={id} initial={notes.data.notes.find((n) => n.authorId === myId)?.text ?? ''} />
+          )}
+          {notes.data && !notes.data.canWrite && others.length === 0 && (
+            <Text c="dimmed" size="sm">
+              No notes yet.
+            </Text>
+          )}
+          {others.map((n) => (
+            <OtherNote key={`${n.authorId}-${n.authorName}`} note={n} />
+          ))}
+        </Stack>
+      </SimpleGrid>
     </Stack>
   )
 }

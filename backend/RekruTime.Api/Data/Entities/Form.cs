@@ -21,6 +21,7 @@ public class FormField
     public required string Label { get; set; }
     public bool Required { get; set; }
     public List<string> Options { get; set; } = []; // single/multi choice only
+    public string? FollowUp { get; set; } // a question for the interview, shown under the recruit's answer (#93)
 }
 
 // One per recruit per form; submitting again replaces it.

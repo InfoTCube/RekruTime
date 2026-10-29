@@ -10,11 +10,11 @@ public record ApplicationReviewDto(int Id, int SectionId, string SectionName, Ap
 public record InterviewSummaryDto(int Id, DateTime Start, InterviewStatus Status, List<string> Interviewers);
 public record RecruitRowDto(int Id, string FullName, string Email, List<ApplicationReviewDto> Applications, InterviewSummaryDto? Interview);
 public record InterviewWithNotesDto(InterviewDto Interview, NotesDto Notes);
-public record RecruitDetailDto(RecruitDto Recruit, List<ApplicationReviewDto> Applications, List<InterviewWithNotesDto> Interviews);
+public record RecruitDetailDto(RecruitDto Recruit, List<ApplicationReviewDto> Applications, List<InterviewWithNotesDto> Interviews, PrepDto Prep);
 
 // After the interviews: recruits with their applications and votes. Admins see everything,
 // section leaders only the applications to sections they lead (and recruits who have one).
-public class RecruitReviewService(AppDbContext db, InterviewService interviews, NoteService notes)
+public class RecruitReviewService(AppDbContext db, InterviewService interviews, NoteService notes, PrepService prep)
 {
     public record Viewer(string UserId, bool IsAdmin);
 
@@ -57,7 +57,9 @@ public class RecruitReviewService(AppDbContext db, InterviewService interviews, 
                 && (await notes.ListAsync(interviewId, me.UserId, me.IsAdmin)).Value is { } n)
                 withNotes.Add(new InterviewWithNotesDto(interview, n));
 
-        return new RecruitDetailDto(recruit, apps.Select(a => a.Dto).ToList(), withNotes);
+        // Form answers + suggested questions of the sections the viewer reviews.
+        var prepDto = await prep.BuildAsync(id, apps.Select(a => a.Dto.SectionId).ToList());
+        return new RecruitDetailDto(recruit, apps.Select(a => a.Dto).ToList(), withNotes, prepDto);
     }
 
     // null = admin (all sections)

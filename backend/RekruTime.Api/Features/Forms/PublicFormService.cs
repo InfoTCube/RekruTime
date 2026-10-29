@@ -27,6 +27,7 @@ public class PublicFormService(AppDbContext db, IOptions<ClubOptions> club)
         if (!f.IsOpen) return Closed;
         var sections = await db.Sections.OrderBy(s => s.Name).Select(s => new PublicSectionDto(s.Id, s.Name)).ToListAsync();
         return new PublicFormDto(club.Value.Name, club.Value.ContactEmail, f.Title, f.Description,
+            // No FollowUp: those are interview questions – recruits must not see them.
             f.Fields.Select(x => new FieldDto(x.Id, x.Type, x.Label, x.Required, x.Options)).ToList(), sections);
     }
 

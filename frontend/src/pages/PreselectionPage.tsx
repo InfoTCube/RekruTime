@@ -1,6 +1,6 @@
-import { ActionIcon, Alert, Anchor, Badge, Button, Checkbox, Group, Modal, Paper, SegmentedControl, Select, Stack, Table, Text, TextInput, Tooltip } from '@mantine/core'
+import { ActionIcon, Alert, Anchor, Badge, Button, Checkbox, Group, Modal, Paper, SegmentedControl, Select, Stack, Table, Text, Textarea, TextInput, Tooltip } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { IconCheck, IconFilter, IconMailForward, IconX } from '@tabler/icons-react'
+import { IconCheck, IconFilter, IconMailForward, IconMessageQuestion, IconX } from '@tabler/icons-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, errorMessage } from '../api'
@@ -44,6 +44,7 @@ export function PreselectionPage() {
   const [selected, setSelected] = useState<number[]>([])
   const queryClient = useQueryClient()
   const [inviting, setInviting] = useState(false)
+  const [editingQuestions, setEditingQuestions] = useState(false)
 
   const list = useQuery({
     queryKey: ['preselection', sectionId],
@@ -75,6 +76,11 @@ export function PreselectionPage() {
         {isAdmin(me.data) && (
           <Button leftSection={<IconMailForward size={16} />} onClick={() => setInviting(true)}>
             Invite preselected…
+          </Button>
+        )}
+        {sectionId !== null && (
+          <Button variant="default" leftSection={<IconMessageQuestion size={16} />} onClick={() => setEditingQuestions(true)}>
+            Interview questions
           </Button>
         )}
         {options.length > 1 && (
@@ -109,6 +115,10 @@ export function PreselectionPage() {
           )}
         </Group>
       </Group>
+
+      <Modal opened={editingQuestions} onClose={() => setEditingQuestions(false)} title={`Interview questions – ${sectionId ? sectionName(sectionId) : ''}`} size="lg" centered>
+        {editingQuestions && sectionId && <QuestionsForm key={sectionId} sectionId={sectionId} onDone={() => setEditingQuestions(false)} />}
+      </Modal>
 
       <Modal opened={inviting} onClose={() => setInviting(false)} title="Invite to interview" size="lg" centered>
         {inviting && <InviteForm onDone={() => setInviting(false)} />}
@@ -291,6 +301,47 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         </Button>
         <Button disabled={!chosen.length} loading={invite.isPending} onClick={() => invite.mutate()}>
           {sendEmails ? `Invite ${chosen.length} & send e-mails` : `Create ${chosen.length} links`}
+        </Button>
+      </Group>
+    </Stack>
+  )
+}
+
+// Suggested questions of one section, shown to its interviewers next to the recruit's answers (#93).
+function QuestionsForm({ sectionId, onDone }: { sectionId: string; onDone: () => void }) {
+  const url = `/api/sections/${sectionId}/questions`
+  const current = useQuery({ queryKey: ['section-questions', sectionId], queryFn: () => api<{ questions: string[] }>(url) })
+  const [text, setText] = useState<string | null>(null) // null = not edited yet
+  const queryClient = useQueryClient()
+  const save = useMutation({
+    mutationFn: () => api<{ questions: string[] }>(url, { method: 'PUT', json: { questions: (text ?? '').split('\n') } }),
+    onSuccess: (r) => {
+      notifySuccess(`${r.questions.length} question${r.questions.length === 1 ? '' : 's'} saved.`)
+      queryClient.invalidateQueries({ queryKey: ['section-questions', sectionId] })
+      onDone()
+    },
+  })
+
+  if (current.isPending) return <TableSkeleton rows={2} />
+  if (current.isError) return <Alert color="red">{errorMessage(current.error)}</Alert>
+  return (
+    <Stack>
+      <Textarea
+        label="Questions"
+        description="One per line. Interviewers of this section see them on the interview page, next to the recruit's form answers."
+        autosize
+        minRows={5}
+        data-autofocus
+        value={text ?? current.data.questions.join('\n')}
+        onChange={(e) => setText(e.currentTarget.value)}
+      />
+      {save.isError && <Alert color="red">{errorMessage(save.error)}</Alert>}
+      <Group justify="flex-end">
+        <Button variant="default" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button disabled={text === null} loading={save.isPending} onClick={() => save.mutate()}>
+          Save
         </Button>
       </Group>
     </Stack>

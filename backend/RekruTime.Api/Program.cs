@@ -40,6 +40,7 @@ builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<PublicBookingService>();
 builder.Services.AddScoped<InterviewService>();
 builder.Services.AddScoped<NoteService>();
+builder.Services.AddScoped<PrepService>();
 builder.Services.AddScoped<VoteService>();
 builder.Services.AddScoped<RecruitService>();
 builder.Services.AddScoped<RecruitReviewService>();

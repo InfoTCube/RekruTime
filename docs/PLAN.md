@@ -249,6 +249,8 @@ The interview page (and recruit detail) shows all of the recruit's form answers 
 
 Same visibility as notes: interviewers, leaders of the interview's sections, admins.
 
+Built (#93): `Section.SuggestedQuestions` (text[]) edited by the section's leaders and admins on the Preselection page (`GET/PUT /api/sections/{id}/questions`); `FormField.FollowUp` set in the form builder and **never sent to the public form**. `GET /api/interviews/{id}/prep` → every form response (question order, section answers as names, follow-ups) + the questions of the interview's sections; the recruit detail carries the same prep for the sections the viewer reviews. The interview page shows prep and notes side by side. Ticking off asked questions: not built (the note covers it).
+
 ---
 
 ## 4. Mailing

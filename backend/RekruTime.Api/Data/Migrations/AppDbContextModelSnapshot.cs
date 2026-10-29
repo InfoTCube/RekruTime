@@ -533,6 +533,8 @@ namespace RekruTime.Api.Data.Migrations
                         {
                             b1.IsRequired();
 
+                            b1.Property<string>("FollowUp");
+
                             b1.Property<string>("Id")
                                 .IsRequired();
 
@@ -764,6 +766,10 @@ namespace RekruTime.Api.Data.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.PrimitiveCollection<List<string>>("SuggestedQuestions")
+                        .IsRequired()
+                        .HasColumnType("text[]");
 
                     b.HasKey("Id");
 

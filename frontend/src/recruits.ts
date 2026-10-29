@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from './api'
 import { isAdmin, type Me } from './auth'
-import type { Interview, InterviewStatus, Notes } from './interviews'
+import type { Interview, InterviewStatus, Notes, Prep } from './interviews'
 
 export type ApplicationStatus =
   | 'Pending' | 'Disputed' | 'Accepted' | 'Rejected'
@@ -33,6 +33,7 @@ export type RecruitDetail = {
   recruit: Interview['recruit']
   applications: Application[]
   interviews: { interview: Interview; notes: Notes }[]
+  prep: Prep
 }
 
 export const recruitsKey = ['recruits']

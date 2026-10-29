@@ -212,6 +212,13 @@ function FieldEditor({ field: f, error, first, last, onChange, onMove, onRemove 
             Recruits tick one or more of the club's sections; each one becomes an application in that section.
           </Text>
         )}
+        <TextInput
+          label="Follow-up for the interview (optional)"
+          description="Shown to interviewers under the recruit's answer – never to recruits."
+          placeholder="e.g. Show us something you built with it."
+          value={f.followUp ?? ''}
+          onChange={(e) => onChange({ ...f, followUp: e.currentTarget.value })}
+        />
         {error && (
           <Text size="sm" c="red">
             {error}
