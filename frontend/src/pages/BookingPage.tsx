@@ -22,7 +22,7 @@ type LinkInfo = {
   language: string
   booking: { start: string; end: string } | null
 }
-type Slot = { start: string; end: string; color: 'Green' | 'Yellow' }
+type Slot = { start: string; end: string; color: 'Green' | 'Yellow'; suggested: boolean } // suggested: next to an interview already planned (#110)
 
 const T = createContext<Dictionary>(dictionaries[defaultLanguage])
 const bookingTitle = (t: Dictionary) => t.title
@@ -165,8 +165,30 @@ function Booking({ info, base }: { info: LinkInfo; base: string }) {
   })
 
   const days = [...new Set((slots.data ?? []).map((s) => dayKey(s.start)))]
-  const selectedDay = day && days.includes(day) ? day : days[0]
+  // Open on the first day with suggested times – the interviewers are there anyway.
+  const firstSuggested = slots.data?.find((s) => s.suggested)
+  const selectedDay = day && days.includes(day) ? day : firstSuggested ? dayKey(firstSuggested.start) : days[0]
   const daySlots = (slots.data ?? []).filter((s) => dayKey(s.start) === selectedDay)
+  const suggested = daySlots.filter((s) => s.suggested)
+  const timeGrid = (list: Slot[]) => (
+    <SimpleGrid cols={{ base: 3, xs: 4, sm: 6 }} spacing="xs">
+      {list.map((s) => {
+        const active = picked?.start === s.start
+        return (
+          <Button
+            key={s.start}
+            aria-pressed={active}
+            variant={active ? 'filled' : 'light'}
+            color={active ? `${slotColor[s.color]}.8` : slotColor[s.color]}
+            c={active ? undefined : `var(--slot-${s.color})`}
+            onClick={() => setPicked(s)}
+          >
+            {f.time(s.start)}
+          </Button>
+        )
+      })}
+    </SimpleGrid>
+  )
   const yellowSwitch = (
     <Switch
       color="spark.6"
@@ -236,23 +258,29 @@ function Booking({ info, base }: { info: LinkInfo; base: string }) {
       )}
       {daySlots.length > 0 && (
         <Step n={2} title={t.stepTime}>
-          <SimpleGrid cols={{ base: 3, xs: 4, sm: 6 }} spacing="xs">
-            {daySlots.map((s) => {
-              const active = picked?.start === s.start
-              return (
-                <Button
-                  key={s.start}
-                  aria-pressed={active}
-                  variant={active ? 'filled' : 'light'}
-                  color={active ? `${slotColor[s.color]}.8` : slotColor[s.color]}
-                  c={active ? undefined : `var(--slot-${s.color})`}
-                  onClick={() => setPicked(s)}
-                >
-                  {f.time(s.start)}
-                </Button>
-              )
-            })}
-          </SimpleGrid>
+          {suggested.length > 0 ? (
+            <>
+              <Stack gap={6} role="group" aria-label={t.suggestedTimes}>
+                <Text fw={600} size="sm">
+                  {t.suggestedTimes}{' '}
+                  <Text span size="sm" c="dimmed" fw={400}>
+                    · {t.suggestedNote}
+                  </Text>
+                </Text>
+                {timeGrid(suggested)}
+              </Stack>
+              {daySlots.length > suggested.length && (
+                <Stack gap={6} role="group" aria-label={t.otherTimes}>
+                  <Text fw={600} size="sm">
+                    {t.otherTimes}
+                  </Text>
+                  {timeGrid(daySlots.filter((s) => !s.suggested))}
+                </Stack>
+              )}
+            </>
+          ) : (
+            timeGrid(daySlots)
+          )}
           {yellowSwitch}
           {showYellow && (
             <Stack gap={4}>
