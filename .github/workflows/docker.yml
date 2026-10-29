@@ -1,14 +1,16 @@
-# Builds the production image on every push to main → ghcr.io/infotcube/rekrutime:latest (+ :sha-<commit>).
+# Builds the production image for a release only: pushing tag v1.2.3 → ghcr.io/infotcube/rekrutime:1.2.3, :1.2 and :latest.
+# Release: git tag v1.2.3 && git push origin v1.2.3 (then a GitHub Release with notes). Pushes to main publish nothing.
 # The server updates with: docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
 name: Docker image
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    tags: ['v*.*.*']
+  workflow_dispatch: # rebuild a release: run it on the tag
 
 jobs:
   build:
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,9 +22,18 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/infotcube/rekrutime
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
       - uses: docker/build-push-action@v6
         with:
           push: true
-          tags: |
-            ghcr.io/infotcube/rekrutime:latest
-            ghcr.io/infotcube/rekrutime:sha-${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: VERSION=${{ steps.meta.outputs.version }}

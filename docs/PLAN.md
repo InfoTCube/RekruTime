@@ -296,5 +296,12 @@ Same visibility as notes: interviewers, leaders of the interview's sections, adm
 
 ## Future (not planned in detail)
 
+- **No-shows**: an interview status `NoShow` set by an interviewer/admin, with a one-click e-mail to the recruit carrying a link to book again (the link reopens like after a cancel).
+- **Interviewer swaps**: an interviewer marks "I need a replacement"; members of the interview's sections who are free then see it and take it over with one click (team change + the usual moved/added/removed notices). No admin needed.
+- **Capacity warnings + availability nudge**: Overview warns when invited-but-unbooked recruits outnumber the free green slots (per section); a button e-mails members of a section who have no availability in the recruitment period.
+- **Message a group of recruits**: a one-off e-mail to a filtered list (section, status, booked or not) through the outbox, with the usual placeholders.
+- **Recruitment funnel + history**: per-section counts applied → interviewed → accepted, kept as anonymous numbers (per recruitment season) when the GDPR purge deletes the people, so the next board can compare years.
+- **Discord notifications**: webhook URL setting; posts to a channel on new bookings, disputed applications waiting for a final decision, and the accepted list after decisions are sent. No recruit contact data in the posts.
+- **University single sign-on for members**: log in with the university account instead of a RekruTime password (protocol to check with the university IT – OIDC/SAML/CAS; configurable, so other clubs can point it at their university). Accounts still created by admins; SSO only replaces the password.
 - **Telemetry (#92)**: OpenTelemetry in the API (requests, EF, e-mail sender) to a self-hosted dashboard or an error tracker, frontend error reporting, a health check with alerting, simple usage counters. No recruit personal data in telemetry.
 - **Multiple rooms + online interviews**: add `Room` (incl. an "Online" kind with unlimited capacity), `Interview.RoomId`, and change the exclusion constraint to `EXCLUDE USING gist ("RoomId" WITH =, tstzrange(...) WITH &&)`. Then interviewers need their own no-overlap check (today the single room guarantees it). Slot calc picks any free room. Kept out now – one room makes everything simpler.

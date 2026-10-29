@@ -15,6 +15,9 @@ COPY backend/RekruTime.Api/ RekruTime.Api/
 RUN dotnet publish RekruTime.Api -c Release --no-restore -o /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+# Release version (docker.yml passes the tag, e.g. 1.1.0) – shown in /api/health and the app menu.
+ARG VERSION=dev
+ENV APP_VERSION=$VERSION
 # curl for the healthcheck; /keys = Data Protection keys (mount a volume there so logins survive redeploys)
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*     && mkdir /keys && chown $APP_UID /keys
 WORKDIR /app
