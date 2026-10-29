@@ -93,4 +93,23 @@ public class PublicBookingTests() : IntegrationTest(new Dictionary<string, strin
         await App.SetPeriodAsync(admin, day, day);
         Assert.Equal(slots, await Booking.SlotsAsync(App, setup.Links[0]));
     }
+
+    [Fact]
+    public async Task Times_next_to_a_booked_interview_are_suggested_and_go_to_the_same_team()
+    {
+        var setup = await Booking.FullSetupAsync(App, linkCount: 2, names: ["Ala", "Ola", "Ela"]); // all free 10–14
+        Assert.Equal(HttpStatusCode.OK, await Booking.BookAsync(App, setup.Links[0], setup.FirstSlot, "a@x.pl"));
+        var firstTeam = await App.DbAsync(db => db.Interviews.SelectMany(i => i.Interviewers.Select(u => u.Id)).OrderBy(id => id).ToListAsync());
+
+        var slots = (await Json(App.CreateClient().GetAsync($"/api/public/links/{setup.Links[1]}/slots"))).EnumerateArray()
+            .ToDictionary(x => x.GetProperty("start").GetDateTime().ToUniversalTime(), x => x.GetProperty("suggested").GetBoolean());
+        var next = setup.FirstSlot.AddMinutes(30);
+        Assert.True(slots[next]);
+        Assert.False(slots[setup.FirstSlot.AddHours(2)]);
+
+        // The third recruiter has fewer interviews, but the two already there get it – one trip for them.
+        Assert.Equal(HttpStatusCode.OK, await Booking.BookAsync(App, setup.Links[1], next, "b@x.pl"));
+        var secondTeam = await App.DbAsync(db => db.Interviews.Where(i => i.Start == next).SelectMany(i => i.Interviewers.Select(u => u.Id)).OrderBy(id => id).ToListAsync());
+        Assert.Equal(firstTeam, secondTeam);
+    }
 }

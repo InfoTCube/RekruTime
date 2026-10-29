@@ -11,7 +11,7 @@ public record BookingDto(DateTime Start, DateTime End);
 public record PublicLinkDto(
     string? ClubName, List<string> Sections, int DurationMinutes, string? ContactEmail, string? Location,
     DateOnly? InterviewsFrom, DateOnly? InterviewsTo, string? Name, string? Email, string Language, BookingDto? Booking);
-public record PublicSlotDto(DateTime Start, DateTime End, SlotColor Color); // no interviewer names for recruits
+public record PublicSlotDto(DateTime Start, DateTime End, SlotColor Color, bool Suggested); // no interviewer names for recruits
 
 public record BookRequest(
     DateTimeOffset Start,
@@ -50,7 +50,7 @@ public class PublicBookingService(AppDbContext db, SlotService slots, IOptions<C
         if (data is null) return new List<PublicSlotDto>();
         return SlotCalculator.Calculate(data.Query)
             .Where(s => includeYellow || s.Color == SlotColor.Green)
-            .Select(s => new PublicSlotDto(s.Start, s.End, s.Color)).ToList();
+            .Select(s => new PublicSlotDto(s.Start, s.End, s.Color, s.Suggested)).ToList();
     }
 
     public async Task<Result<BookingDto>> BookAsync(string token, BookRequest req)

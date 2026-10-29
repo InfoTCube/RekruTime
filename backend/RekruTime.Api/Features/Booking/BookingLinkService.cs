@@ -27,7 +27,7 @@ public record LinkDto(int Id, string Token, string Url, string? Label, string? R
 public record InviteRequest([MinLength(1), MaxLength(2000)] int[] LinkIds);
 public record InviteResult(int Queued, int Skipped);
 public record SetActiveRequest(bool IsActive);
-public record PreviewSlotDto(DateTime Start, DateTime End, SlotColor Color, List<string> Team);
+public record PreviewSlotDto(DateTime Start, DateTime End, SlotColor Color, List<string> Team, bool Suggested);
 
 public class BookingLinkService(AppDbContext db, SlotService slots, InvitationService invitations)
 {
@@ -109,7 +109,7 @@ public class BookingLinkService(AppDbContext db, SlotService slots, InvitationSe
         var data = await slots.LoadAsync(sectionIds, from.UtcDateTime, to.UtcDateTime);
         if (data is null) return new List<PreviewSlotDto>();
         return SlotCalculator.Calculate(data.Query)
-            .Select(s => new PreviewSlotDto(s.Start, s.End, s.Color, s.Team.Select(t => data.Names[t]).ToList())).ToList();
+            .Select(s => new PreviewSlotDto(s.Start, s.End, s.Color, s.Team.Select(t => data.Names[t]).ToList(), s.Suggested)).ToList();
     }
 
     // Everything the list needs, in one query; status is derived in memory.

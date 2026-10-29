@@ -57,6 +57,13 @@ public class SlotService(AppDbContext db, IOptions<ClubOptions> club)
                 .Select(a => new { a.UserId, a.Start, a.End })
                 .ToListAsync())
             .ToLookup(a => a.UserId, a => new Interval(a.Start, a.End));
+        // Each person's scheduled interviews around the range – suggested slots and the on-site team preference (#110).
+        var (dayBefore, dayAfter) = (from.AddDays(-1), to.AddDays(1));
+        var interviewsOf = (await db.Interviews
+                .Where(i => i.Status == InterviewStatus.Scheduled && i.Start < dayAfter && i.BlockedUntil > dayBefore)
+                .SelectMany(i => i.Interviewers.Where(u => ids.Contains(u.Id)).Select(u => new { UserId = u.Id, i.Start, i.BlockedUntil }))
+                .ToListAsync())
+            .ToLookup(x => x.UserId, x => new Interval(x.Start, x.BlockedUntil));
         var busy = await db.Interviews
             // Same rule as the DB constraint EX_Interviews_NoOverlap: only cancelled interviews free the room.
             .Where(i => i.Status != InterviewStatus.Cancelled && i.Start < to && i.BlockedUntil > from)
@@ -68,8 +75,8 @@ public class SlotService(AppDbContext db, IOptions<ClubOptions> club)
             TimeSpan.FromMinutes(sections.Max(s => s.InterviewDurationMinutes)),
             TimeSpan.FromMinutes(sections.Max(s => s.BufferMinutes)),
             from, to,
-            people.Select(p => new Interviewer(p.Id, p.IsAdmin, p.Sections.ToHashSet(), availability[p.Id].ToList(), p.Load)).ToList(),
-            busy);
+            people.Select(p => new Interviewer(p.Id, p.IsAdmin, p.Sections.ToHashSet(), availability[p.Id].ToList(), p.Load, interviewsOf[p.Id].ToList())).ToList(),
+            busy, zone);
         return new SlotData(query, people.ToDictionary(p => p.Id, p => p.DisplayName));
     }
 }

@@ -186,4 +186,78 @@ public class SlotCalculatorTests
         Assert.Equal(2, SlotCalculator.Capacity(Slots([Ai], people), TimeSpan.FromMinutes(30)));           // 10:00, 10:30
         Assert.Equal(1, SlotCalculator.Capacity(Slots([Ai], people, buffer: 15), TimeSpan.FromMinutes(45))); // 10:00 (+ buffer) only
     }
+
+    // ---- Suggested slots (#110): next to an interview of someone on the team ----
+
+    static Interviewer Interviewing(Interviewer p, params Interval[] interviews) => p with { Interviews = interviews };
+
+    [Fact]
+    public void Slots_right_before_or_after_an_interview_of_the_team_are_suggested()
+    {
+        var interview = Free(12, 12, 0, 30); // a + b interview 12:00–12:30
+        var slots = Slots([Ai], [Interviewing(Person("a", [Ai], free: Free(9, 17)), interview), Interviewing(Person("b", [Ai], free: Free(9, 17)), interview)], busy: [interview]);
+
+        var suggested = Starts(slots.Where(s => s.Suggested));
+        Assert.Equal(["11:00", "11:15", "11:30", "12:30", "12:45", "13:00"], suggested); // ≤ 30 min gap on either side
+        Assert.DoesNotContain("10:45", suggested);
+        Assert.DoesNotContain("13:15", suggested);
+    }
+
+    [Fact]
+    public void People_already_interviewing_that_day_are_preferred_over_less_busy_ones()
+    {
+        var interview = Free(12, 12, 0, 30);
+        Interviewer[] people =
+        [
+            Interviewing(Person("a", [Ai], load: 3, free: Free(9, 17)), interview),
+            Interviewing(Person("b", [Ai], load: 3, free: Free(9, 17)), interview),
+            Person("c", [Ai], load: 0, free: Free(9, 17)),
+        ];
+        var slots = Slots([Ai], people, busy: [interview]);
+
+        Assert.Equal(["a", "b"], slots.Single(s => s.Start == At(12, 30)).Team.Order()); // they're there anyway
+        Assert.Equal(["a", "b"], slots.Single(s => s.Start == At(16)).Team.Order());     // same day, not adjacent: still preferred
+        Assert.False(slots.Single(s => s.Start == At(16)).Suggested);
+
+        // Another day: back to the least busy.
+        var tomorrow = Slots([Ai], people.Select(p => p with { Availability = [new(At(33), At(35))] }).ToArray(), busy: [interview], to: At(48));
+        Assert.Contains("c", tomorrow.First().Team);
+    }
+
+    [Fact]
+    public void A_neighbouring_interview_of_other_people_is_not_a_reason_to_suggest()
+    {
+        var interview = Free(12, 12, 0, 30); // x + y interview, they aren't free afterwards
+        Interviewer[] people =
+        [
+            Interviewing(Person("x", [Ai], free: Free(12, 12, 0, 30)), interview),
+            Interviewing(Person("y", [Ai], free: Free(12, 12, 0, 30)), interview),
+            Person("c", [Ai], free: Free(9, 17)),
+            Person("d", [Ai], free: Free(9, 17)),
+        ];
+
+        Assert.DoesNotContain(Slots([Ai], people, busy: [interview]), s => s.Suggested);
+    }
+
+    [Fact]
+    public void The_buffer_counts_as_part_of_the_neighbouring_interview()
+    {
+        var block = Free(12, 12, 0, 45); // 30 min interview + 15 min buffer
+        var slots = Slots([Ai], [Interviewing(Person("a", [Ai], free: Free(9, 17)), block), Interviewing(Person("b", [Ai], free: Free(9, 17)), block)], busy: [block], buffer: 15);
+
+        Assert.Equal("12:45", Starts(slots.Where(s => s.Start > At(12) && s.Suggested)).First());
+        // Before: the slot's own 45-min block must end by 12:00, at most 30 min earlier.
+        Assert.Equal(["10:45", "11:00", "11:15"], Starts(slots.Where(s => s.Start < At(12) && s.Suggested)));
+    }
+
+    [Fact]
+    public void A_day_without_interviews_has_no_suggestions_and_yellow_slots_never_are()
+    {
+        Assert.DoesNotContain(Slots([Ai], [Person("a", [Ai], free: Free(9, 17)), Person("b", [Ai], free: Free(9, 17))]), s => s.Suggested);
+
+        var interview = Free(12, 12, 0, 30);
+        var alone = Slots([Ai], [Interviewing(Person("a", [Ai], free: Free(9, 17)), interview)], busy: [interview]);
+        Assert.All(alone, s => Assert.Equal(SlotColor.Yellow, s.Color));
+        Assert.DoesNotContain(alone, s => s.Suggested);
+    }
 }

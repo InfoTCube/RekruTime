@@ -4,7 +4,7 @@ import { api, errorMessage } from '../../api'
 import { periodRange, useRecruitmentPeriod } from '../../recruitment'
 import { slotColor } from '../../theme'
 
-type PreviewSlot = { start: string; end: string; color: 'Green' | 'Yellow'; team: string[] }
+type PreviewSlot = { start: string; end: string; color: 'Green' | 'Yellow'; team: string[]; suggested: boolean }
 
 const dayLabel = (d: Date) => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 const timeLabel = (d: Date) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -35,15 +35,15 @@ export function LinkCoverage({ linkId }: { linkId: number }) {
   return (
     <Stack gap="md">
       <Text size="sm" c="dimmed">
-        {green} green and {slots.data.length - green} yellow start times (from {period.data?.minNoticeHours ?? 12} h ahead). Hover a time to see who would interview.
+        {green} green and {slots.data.length - green} yellow start times (from {period.data?.minNoticeHours ?? 12} h ahead). Hover a time to see who would interview; ★ = next to a planned interview of that team, suggested to recruits first.
       </Text>
       {[...days].map(([day, daySlots]) => (
         <Stack key={day} gap={4}>
           <Text fw={500}>{day}</Text>
           <Group gap={6}>
             {daySlots.map((s) => (
-              <Tooltip key={s.start} label={s.team.join(' + ')}>
-                <Badge variant="light" color={slotColor[s.color]} radius="sm">
+              <Tooltip key={s.start} label={s.team.join(' + ') + (s.suggested ? ' · suggested' : '')}>
+                <Badge variant="light" color={slotColor[s.color]} radius="sm" leftSection={s.suggested ? '★' : undefined}>
                   {timeLabel(new Date(s.start))}
                 </Badge>
               </Tooltip>
