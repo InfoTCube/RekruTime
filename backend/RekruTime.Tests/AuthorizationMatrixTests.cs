@@ -70,6 +70,12 @@ public partial class AuthorizationMatrixTests : IntegrationTest
         new("DELETE", "/api/email/templates/{key}/{language}", Access.Admin),
         new("POST", "/api/email/templates/{key}/{language}/preview", Access.Admin, new { subject = "x", body = "x" }),
         new("POST", "/api/email/decisions", Access.Admin, new { recruitIds = new[] { 999999 } }),
+        new("GET", "/api/forms", Access.Admin),
+        new("GET", "/api/forms/{id:int}", Access.Admin),
+        new("POST", "/api/forms", Access.Admin, new { }),
+        new("PUT", "/api/forms/{id:int}", Access.Admin, new { title = "x", fields = Array.Empty<object>() }),
+        new("PATCH", "/api/forms/{id:int}", Access.Admin, new { isOpen = false }),
+        new("DELETE", "/api/forms/{id:int}", Access.Admin),
 
         // Last: these change who the client is logged in as.
         new("POST", "/api/auth/login", Access.Public, new { email = TestApp.AdminEmail, password = TestApp.AdminPassword }),

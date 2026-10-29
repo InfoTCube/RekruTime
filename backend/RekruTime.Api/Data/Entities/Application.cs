@@ -1,6 +1,7 @@
 namespace RekruTime.Api.Data;
 
-public enum ApplicationStatus { Pending, Disputed, Accepted, Rejected }
+// Submitted → Preselected | NotPreselected → InterviewInvited come from forms (phase 3); Pending onwards from votes.
+public enum ApplicationStatus { Pending, Disputed, Accepted, Rejected, Submitted, Preselected, NotPreselected, InterviewInvited }
 
 public class Application
 {

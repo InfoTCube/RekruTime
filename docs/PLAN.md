@@ -218,10 +218,15 @@ Status is recomputed on every vote and stored (simple filtering). Votes can be c
 ### Data
 ```
 Form                 Id, Title, Description, IsOpen, Schema (jsonb: [{id, type, label, required, options}]), CreatedAt
-FormResponse         Id, FormId, RecruitId, Answers (jsonb), SubmittedAt
+FormResponse         Id, FormId, RecruitId, Answers (jsonb: [{fieldId, values[]}]), SubmittedAt   unique (FormId, RecruitId)
 Application.Status   + Submitted | Preselected | NotPreselected | InterviewInvited
 ```
 Field types: text, textarea, email, phone, single choice, multi choice, **sections** (special: options = sections, creates Applications). No form-builder library – a simple list editor over the JSON schema.
+
+Admin API (#27): `GET/POST /api/forms`, `GET/PUT/PATCH {isOpen}/DELETE /api/forms/{id}`.
+- Full name, e-mail and the GDPR consent are fixed on every form (like the booking page); the schema holds only the extra questions.
+- Answers are keyed by the field id (server-made when left out), so renaming/reordering questions keeps them.
+- At most one sections question; a form can only be open with one. A form with responses can't be deleted (close it); a recruit's GDPR delete takes their responses.
 
 ### Flow
 1. Admin creates form → public URL `/form/:id`
