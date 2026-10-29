@@ -300,6 +300,16 @@ Built (#93): `Section.SuggestedQuestions` (text[]) edited by the section's leade
 
 ## Future (not planned in detail)
 
+- **Application confirmation e-mail (#128)**: after submitting a form, "we got your application" with a copy of the answers, editable template per language, again on resubmission; via the outbox.
+- **Section-specific questions in forms (#129)**: a question shown only to applicants who ticked given sections; shown/hidden live, required only when shown, same rule on the server.
+- **CSV export of form responses (#130)**: per form (admins) or per section (leaders) – every question as a column, statuses per section; UTF-8 with BOM for Excel.
+- **Scheduled opening and closing of forms (#131)**: optional `OpensAt` / `ClosesAt` (club time zone) checked on every request; "Opens on …" before.
+- **Duplicate a form (#132)**: a closed copy for the next recruitment.
+- **Admins edit a recruit's details (#133)**: name, e-mail (unique), phone, Discord; offer to resend the latest invitation/confirmation after an e-mail change.
+- **Recruit timeline (#134)**: applied → preselected → invited → booked → interviewed → votes → decision e-mail, with dates and who – built from existing data.
+- **Automatic GDPR purge (#135)**: delete recruit data N days after the recruitment period ends (setting; off = manual), admins warned a week before; daily job.
+- **Link field type (#136)**: http(s) URL answers (GitHub, portfolio, CV) shown as clickable links in preselection and prep.
+- **Admin panel in Polish (#137)**: PL/EN switch for the logged-in app like the booking page, Polish by default.
 - **No-shows**: an interview status `NoShow` set by an interviewer/admin, with a one-click e-mail to the recruit carrying a link to book again (the link reopens like after a cancel).
 - **Interviewer swaps**: an interviewer marks "I need a replacement"; members of the interview's sections who are free then see it and take it over with one click (team change + the usual moved/added/removed notices). No admin needed.
 - **Capacity warnings + availability nudge**: Overview warns when invited-but-unbooked recruits outnumber the free green slots (per section); a button e-mails members of a section who have no availability in the recruitment period.
