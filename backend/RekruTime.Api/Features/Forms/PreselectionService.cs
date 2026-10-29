@@ -61,8 +61,8 @@ public class PreselectionService(AppDbContext db)
         if (apps.Count != ids.Count) return Error.NotFound("Some applications don't exist.");
         if (led is not null && apps.Any(a => !led.Contains(a.SectionId))) return Error.Forbidden("You can only preselect in the sections you lead.");
 
-        // Applications not in preselection (imported ones, invited, already voted on) are left alone.
-        var changing = apps.Where(a => Settable.Contains(a.Status)).ToList();
+        // Applications not in preselection (imported, invited, voted on) or already told the decision are left alone.
+        var changing = apps.Where(a => Settable.Contains(a.Status) && a.DecisionSentAt == null).ToList();
         foreach (var a in changing) a.Status = req.Status;
         await db.SaveChangesAsync();
         return new PreselectResult(changing.Count, apps.Count - changing.Count);
