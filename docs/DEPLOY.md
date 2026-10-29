@@ -74,17 +74,33 @@ Create a stack (e.g. `rekrutime`), paste `docker-compose.prod.yml` as its compos
 environment. Backups go to `backups/` inside the stack folder. Updating = *Update* / *Pull and redeploy* in the UI
 (same as `pull` + `up -d`).
 
-## Updating / rollback
+## Versions, updating, rollback
+
+Images exist only for releases: `ghcr.io/infotcube/rekrutime:1.1.0` (exact), `:1.1` (latest patch) and `:latest`
+(newest release). What changed in each one: [GitHub Releases](https://github.com/InfoTCube/RekruTime/releases).
+Pin the version in `.env` so an update is always a deliberate step:
+
+```bash
+IMAGE_TAG=1.1.0
+```
+
+Update = change `IMAGE_TAG` to the new release, then:
 
 ```bash
 docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
 ```
 
-To roll back, set `IMAGE_TAG=sha-<commit>` in `.env` and run the same command.
+Roll back = set the previous version and run the same command (database migrations only add, so the previous
+version keeps working unless its release notes say otherwise). The running version: `GET /api/health` →
+`"version"`, or the account menu in the app.
+
+**Releasing** (maintainers): merge to `main`, then `git tag v1.2.0 && git push origin v1.2.0` – the *Docker image*
+workflow builds and pushes the image – and publish a GitHub Release for the tag with the notes. Semver: patch =
+fixes, minor = new features, major = changes admins must act on (config, data).
 
 ## Monitoring
 
-`GET /api/health` → `200 {"status":"ok"}` when the app can reach the database (also used by the container
+`GET /api/health` → `200 {"status":"ok","version":"1.1.0"}` when the app can reach the database (also used by the container
 healthcheck). Add it to Uptime Kuma as an HTTP monitor: `http://localhost:8080/api/health`.
 
 ## Data & backups

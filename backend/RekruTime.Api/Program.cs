@@ -107,8 +107,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
+var version = app.Configuration["APP_VERSION"] ?? "dev"; // set in the Docker image
 app.MapGet("/api/health", async (AppDbContext db) =>
-    await db.Database.CanConnectAsync() ? Results.Ok(new { status = "ok" }) : Results.StatusCode(503));
+    await db.Database.CanConnectAsync() ? Results.Ok(new { status = "ok", version }) : Results.StatusCode(503));
 app.MapAuthEndpoints();
 app.MapSectionEndpoints();
 app.MapUserEndpoints();

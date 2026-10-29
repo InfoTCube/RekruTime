@@ -18,7 +18,7 @@ import {
   IconUsers,
   type Icon,
 } from '@tabler/icons-react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Navigate, Outlet, NavLink as RouterLink, useLocation } from 'react-router'
 import { api } from './api'
@@ -75,6 +75,8 @@ export function Layout() {
   const { setColorScheme } = useMantineColorScheme()
   const dark = useComputedColorScheme('light') === 'dark'
   const queryClient = useQueryClient()
+  // Which release runs here ("dev" outside the Docker image) – in the account menu.
+  const version = useQuery({ queryKey: ['health'], queryFn: () => api<{ version: string }>('/api/health'), staleTime: Infinity }).data?.version
   const logout = useMutation({
     mutationFn: () => api('/api/auth/logout', { method: 'POST' }),
     onSuccess: () => {
@@ -152,6 +154,11 @@ export function Layout() {
                 <Menu.Item leftSection={<IconLogout size={16} />} onClick={() => logout.mutate()}>
                   Log out
                 </Menu.Item>
+                {version && (
+                  <Text size="xs" c="dimmed" px="sm" pt={4} pb={2}>
+                    RekruTime {version}
+                  </Text>
+                )}
               </Menu.Dropdown>
             </Menu>
           </Group>
